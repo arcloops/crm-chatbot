@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { isVercelRuntime } from "./runtime.js";
 
 const emptyToUndefined = (value: unknown) =>
   value === "" || value === undefined || value === null ? undefined : value;
@@ -13,8 +12,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  // Optional on Vercel (campaign queue disabled). Required for local/Railway workers.
-  REDIS_URL: z.preprocess(emptyToUndefined, z.string().optional()),
+  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
 
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   JWT_EXPIRES_IN: z.string().default("7d"),
@@ -29,8 +27,6 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
 
   SENTRY_DSN: z.preprocess(emptyToUndefined, z.string().optional()),
-
-  CRON_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
 
   WHATSAPP_BSP: z.preprocess(emptyToUndefined, z.string().optional()),
   WHATSAPP_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
@@ -52,24 +48,9 @@ export function env(): Env {
         .join("\n");
       throw new Error(`Invalid environment variables:\n${details}`);
     }
-    if (!isVercelRuntime() && !parsed.data.REDIS_URL) {
-      throw new Error(
-        "Invalid environment variables:\nREDIS_URL: required outside Vercel",
-      );
-    }
     cached = parsed.data;
   }
   return cached;
-}
-
-export function requireRedisUrl(): string {
-  const url = env().REDIS_URL;
-  if (!url) {
-    throw new Error(
-      "REDIS_URL is required for campaign queue. Not available on Vercel serverless.",
-    );
-  }
-  return url;
 }
 
 export function isStorageConfigured(): boolean {

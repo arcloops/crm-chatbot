@@ -8,9 +8,8 @@ import {
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { prisma } from "../lib/db.js";
-import { requireRedisUrl } from "../lib/env.js";
 import { getLogger } from "../lib/logger.js";
-import { campaignsQueueEnabled } from "../lib/runtime.js";
+import { env } from "../lib/env.js";
 import { getWhatsAppProvider } from "../whatsapp/index.js";
 
 const log = getLogger({ module: "campaign-worker" });
@@ -23,7 +22,7 @@ let queue: Queue | null = null;
 let worker: Worker | null = null;
 
 function createRedis(): Redis {
-  return new Redis(requireRedisUrl(), {
+  return new Redis(env().REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   });
@@ -168,10 +167,6 @@ async function maybeCompleteCampaign(campaignId: string) {
 }
 
 export function startCampaignWorker() {
-  if (!campaignsQueueEnabled()) {
-    log.warn("Skipping campaign worker (disabled on this runtime)");
-    return null;
-  }
   if (worker) return worker;
 
   workerConnection = createRedis();
@@ -197,11 +192,6 @@ export async function enqueueCampaignRecipients(
   recipientIds: string[],
   rateLimitPerSec: number,
 ) {
-  if (!campaignsQueueEnabled()) {
-    throw new Error(
-      "Campaign sending is disabled on Vercel. Deploy the API worker on Railway/Fly, or use a queue provider.",
-    );
-  }
   const q = getCampaignQueue();
   const limiterMax = Math.max(1, rateLimitPerSec);
 
@@ -222,7 +212,6 @@ export async function enqueueCampaignRecipients(
 }
 
 export async function stopCampaignJobs(campaignId: string) {
-  if (!campaignsQueueEnabled()) return;
   const q = getCampaignQueue();
   const jobs = await q.getJobs(["waiting", "delayed"]);
   for (const job of jobs) {

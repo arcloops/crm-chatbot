@@ -1,9 +1,8 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../lib/db.js";
-import { env, isStorageConfigured } from "../lib/env.js";
+import { isStorageConfigured } from "../lib/env.js";
 import { getLogger } from "../lib/logger.js";
 import { pingRedis } from "../lib/redis.js";
-import { isVercelRuntime } from "../lib/runtime.js";
 
 type CheckStatus = "ok" | "error" | "skipped";
 
@@ -47,18 +46,11 @@ async function healthHandler(_request: FastifyRequest, reply: FastifyReply) {
   }
 
   try {
-    if (!env().REDIS_URL) {
-      checks.redis = {
-        status: "skipped",
-        detail: "REDIS_URL not set (ok on Vercel; campaigns disabled)",
-      };
-    } else {
-      const redisStart = Date.now();
-      const ok = await pingRedis();
-      checks.redis = ok
-        ? { status: "ok", latencyMs: Date.now() - redisStart }
-        : { status: "error", detail: "unexpected PING response" };
-    }
+    const redisStart = Date.now();
+    const ok = await pingRedis();
+    checks.redis = ok
+      ? { status: "ok", latencyMs: Date.now() - redisStart }
+      : { status: "error", detail: "unexpected PING response" };
   } catch (error) {
     checks.redis = {
       status: "error",
@@ -77,9 +69,6 @@ async function healthHandler(_request: FastifyRequest, reply: FastifyReply) {
     timestamp: new Date().toISOString(),
     checks,
   };
-
-  // Attach runtime hint without breaking typed payload consumers
-  Object.assign(payload, { runtime: isVercelRuntime() ? "vercel" : "node" });
 
   log.info({ status: payload.status, durationMs: Date.now() - started }, "Health check");
 
