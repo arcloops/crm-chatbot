@@ -35,6 +35,7 @@ See also:
 
 - `docs/SCALE_AND_INTEGRATIONS.md`
 - `docs/RUNBOOKS.md`
+- `docs/VERCEL_BACKEND.md` — deploy API on Vercel (campaigns disabled)
 - `node scripts/verify-phase1013.js` / `node scripts/e2e-smoke.js` (API must be running)
 
 ## Scripts

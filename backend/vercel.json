@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "npx prisma generate && npm run build",
+  "crons": [
+    {
+      "path": "/cron/campaigns/tick",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

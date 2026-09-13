@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 import { resolveAudience } from "../campaigns/audience.js";
 import { prisma } from "../lib/db.js";
+import { campaignsQueueEnabled } from "../lib/runtime.js";
 import { requirePermission } from "../plugins/auth.js";
 import { enqueueCampaignRecipients, stopCampaignJobs } from "../workers/campaign.js";
 
@@ -301,6 +302,14 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
     "/campaigns/:id/start",
     { preHandler: requirePermission("campaigns:write") },
     async (request, reply) => {
+      if (!campaignsQueueEnabled()) {
+        return reply.status(503).send({
+          error:
+            "Campaign sending is disabled on Vercel serverless. Use a Railway/Fly worker for BullMQ, or keep CRUD-only on Vercel.",
+          code: "CAMPAIGNS_DISABLED_ON_VERCEL",
+        });
+      }
+
       const { id } = request.params as { id: string };
       const campaign = await prisma.campaign.findUnique({ where: { id } });
       if (!campaign) return reply.status(404).send({ error: "Not found" });
