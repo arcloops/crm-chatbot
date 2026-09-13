@@ -1,0 +1,11 @@
+node_modules
+frontend/.next
+frontend/out
+backend/dist
+coverage
+*.tsbuildinfo
+package-lock.json
+Combined_Data_Model_and_Tech_Stack.md
+PHASE_BY_PHASE_FEATURE_PLAN.md
+AGENTS.md
+CLAUDE.md

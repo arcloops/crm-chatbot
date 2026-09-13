@@ -1,0 +1,515 @@
+// Phases 0–13 schema: CRM + WhatsApp + campaigns + inbox + compliance + analytics + developers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AppMeta {
+  id        String   @id @default("default")
+  version   String   @default("0.0.0")
+  phase     String   @default("0")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_meta")
+}
+
+enum StaffRole {
+  ADMIN
+  CAMPAIGN_MANAGER
+  SUPPORT_AGENT
+  VIEWER
+}
+
+enum ActiveStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model StaffUser {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  role         StaffRole    @default(VIEWER)
+  permissions  String[]     @default([])
+  activeStatus ActiveStatus @default(ACTIVE) @map("active_status")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  campaignsCreated Campaign[]     @relation("CampaignCreator")
+  assignedInbox    Conversation[] @relation("InboxStaff")
+
+  @@map("staff_users")
+}
+
+enum PropertyCategory {
+  APARTMENT
+  HOUSE
+  LAND
+  COMMERCIAL
+  PRE_LAUNCH
+  MIXED_USE
+}
+
+enum TransactionType {
+  SALE
+  RENT
+  INVESTMENT
+  LEASE
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  RESERVED
+  UNDER_OFFER
+  SOLD
+  RENTED
+  COMING_SOON
+}
+
+model Listing {
+  id                 String             @id @default(cuid())
+  listingCode        String             @unique @map("listing_code")
+  title              String
+  propertyCategory   PropertyCategory   @map("property_category")
+  transactionType    TransactionType    @map("transaction_type")
+  location           String
+  latitude           Float?
+  longitude          Float?
+  price              Decimal            @db.Decimal(14, 2)
+  currency           String             @default("BDT")
+  sizeValue          Float?             @map("size_value")
+  sizeUnit           String?            @map("size_unit")
+  bedrooms           Int?
+  bathrooms          Int?
+  availabilityStatus AvailabilityStatus @default(AVAILABLE) @map("availability_status")
+  amenities          String[]           @default([])
+  photos             String[]           @default([])
+  description        String?
+  installmentPlan    Json?              @map("installment_plan")
+  zoning             String?
+  floorNumber        Int?               @map("floor_number")
+  yearBuilt          Int?               @map("year_built")
+  completionDate     DateTime?          @map("completion_date")
+  archivedAt         DateTime?          @map("archived_at")
+  lastUpdated        DateTime           @default(now()) @updatedAt @map("last_updated")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  brokerId String? @map("broker_id")
+  broker   Broker? @relation("ListingBroker", fields: [brokerId], references: [id], onDelete: SetNull)
+
+  assignedBrokers Broker[]   @relation("BrokerListings")
+  customers       Customer[]
+
+  projectId String?  @map("project_id")
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([availabilityStatus])
+  @@index([propertyCategory])
+  @@index([transactionType])
+  @@index([location])
+  @@index([projectId])
+  @@map("listings")
+}
+
+enum BrokerSpecialization {
+  RESIDENTIAL
+  COMMERCIAL
+  LAND
+}
+
+model Broker {
+  id             String                @id @default(cuid())
+  brokerCode     String                @unique @map("broker_code")
+  name           String
+  phone          String
+  phoneE164      String                @unique @map("phone_e164")
+  email          String?
+  regionArea     String?               @map("region_area")
+  specialization BrokerSpecialization?
+  activeStatus   ActiveStatus          @default(ACTIVE) @map("active_status")
+  joinDate       DateTime?             @map("join_date")
+  optInStatus    Boolean               @default(true) @map("opt_in_status")
+  optInAt        DateTime?             @map("opt_in_at")
+  optInSource    String?               @map("opt_in_source")
+  optOutAt       DateTime?             @map("opt_out_at")
+  optOutSource   String?               @map("opt_out_source")
+  tags           String[]              @default([])
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  listingsAssigned Listing[]  @relation("BrokerListings")
+  ownedListings    Listing[]  @relation("ListingBroker")
+  customers        Customer[]
+  prospects        Prospect[]
+
+  @@index([name])
+  @@map("brokers")
+}
+
+enum CustomerTransactionType {
+  BOUGHT
+  RENTED
+  INVESTED
+}
+
+model Customer {
+  id              String                  @id @default(cuid())
+  customerCode    String                  @unique @map("customer_code")
+  name            String
+  phone           String
+  phoneE164       String                  @unique @map("phone_e164")
+  email           String?
+  transactionType CustomerTransactionType @map("transaction_type")
+  transactionDate DateTime?               @map("transaction_date")
+  referralCount   Int                     @default(0) @map("referral_count")
+  optInStatus     Boolean                 @default(true) @map("opt_in_status")
+  optInAt         DateTime?               @map("opt_in_at")
+  optInSource     String?                 @map("opt_in_source")
+  optOutAt        DateTime?               @map("opt_out_at")
+  optOutSource    String?                 @map("opt_out_source")
+  tags            String[]                @default([])
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  listingId String?  @map("listing_id")
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  assignedBrokerId String? @map("assigned_broker_id")
+  assignedBroker   Broker? @relation(fields: [assignedBrokerId], references: [id], onDelete: SetNull)
+
+  referrals Prospect[] @relation("CustomerReferrals")
+
+  @@index([name])
+  @@map("customers")
+}
+
+enum ProspectIntent {
+  BUY
+  RENT
+  INVEST
+}
+
+enum LeadStage {
+  NEW
+  QUALIFIED
+  VIEWING_BOOKED
+  COLD
+}
+
+model Prospect {
+  id                     String            @id @default(cuid())
+  prospectCode           String            @unique @map("prospect_code")
+  name                   String
+  phone                  String
+  phoneE164              String            @unique @map("phone_e164")
+  budgetMin              Decimal?          @map("budget_min") @db.Decimal(14, 2)
+  budgetMax              Decimal?          @map("budget_max") @db.Decimal(14, 2)
+  preferredLocation      String?           @map("preferred_location")
+  propertyTypeInterest   PropertyCategory? @map("property_type_interest")
+  intent                 ProspectIntent?
+  leadSource             String?           @map("lead_source")
+  leadStage              LeadStage         @default(NEW) @map("lead_stage")
+  lastInteractionDate    DateTime?         @map("last_interaction_date")
+  optInStatus            Boolean           @default(true) @map("opt_in_status")
+  optInAt                DateTime?         @map("opt_in_at")
+  optInSource            String?           @map("opt_in_source")
+  optOutAt               DateTime?         @map("opt_out_at")
+  optOutSource           String?           @map("opt_out_source")
+  tags                   String[]          @default([])
+  conversationHistoryRef String?           @map("conversation_history_ref")
+  convertedAt            DateTime?         @map("converted_at")
+  viewingAt              DateTime?         @map("viewing_at")
+  viewingNote            String?           @map("viewing_note")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
+
+  assignedBrokerId String? @map("assigned_broker_id")
+  assignedBroker   Broker? @relation(fields: [assignedBrokerId], references: [id], onDelete: SetNull)
+
+  referredByCustomerId String?   @map("referred_by_customer_id")
+  referredByCustomer   Customer? @relation("CustomerReferrals", fields: [referredByCustomerId], references: [id], onDelete: SetNull)
+
+  conversations Conversation[]
+
+  referredByDeveloperId String?    @map("referred_by_developer_id")
+  referredByDeveloper   Developer? @relation("DeveloperProspects", fields: [referredByDeveloperId], references: [id], onDelete: SetNull)
+
+  @@index([leadStage])
+  @@index([name])
+  @@index([referredByDeveloperId])
+  @@map("prospects")
+}
+
+model SuppressionEntry {
+  id           String   @id @default(cuid())
+  phoneE164    String   @unique @map("phone_e164")
+  optedOutDate DateTime @default(now()) @map("opted_out_date")
+  source       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("suppression_list")
+}
+
+enum WhatsAppMode {
+  MOCK
+  LIVE
+}
+
+model AppSettings {
+  id                        String       @id @default("default")
+  defaultCurrency           String       @default("BDT") @map("default_currency")
+  coldLeadDays              Int          @default(30) @map("cold_lead_days")
+  whatsappMode              WhatsAppMode @default(MOCK) @map("whatsapp_mode")
+  bspDisplayName            String?      @map("bsp_display_name")
+  conversationRetentionDays Int          @default(365) @map("conversation_retention_days")
+  integrationWebhookUrl     String?      @map("integration_webhook_url")
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageType {
+  TEXT
+  TEMPLATE
+  MEDIA
+  STATUS
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model Conversation {
+  id                 String    @id @default(cuid())
+  phoneE164          String    @unique @map("phone_e164")
+  lastInboundAt      DateTime? @map("last_inbound_at")
+  lastOutboundAt     DateTime? @map("last_outbound_at")
+  windowExpiresAt    DateTime? @map("window_expires_at")
+  humanTakeover      Boolean   @default(false) @map("human_takeover")
+  botEnabled         Boolean   @default(true) @map("bot_enabled")
+  escalatedAt        DateTime? @map("escalated_at")
+  escalationSummary  String?   @map("escalation_summary")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  prospectId String?   @map("prospect_id")
+  prospect   Prospect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+
+  assignedStaffId String?    @map("assigned_staff_id")
+  assignedStaff   StaffUser? @relation("InboxStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+
+  messages Message[]
+
+  @@index([prospectId])
+  @@index([humanTakeover])
+  @@index([escalatedAt])
+  @@map("conversations")
+}
+
+model Message {
+  id           String           @id @default(cuid())
+  direction    MessageDirection
+  type         MessageType      @default(TEXT)
+  body         String?
+  mediaUrl     String?          @map("media_url")
+  templateName String?          @map("template_name")
+  bspMessageId String?          @unique @map("bsp_message_id")
+  status       MessageStatus    @default(QUEUED)
+  errorCode    String?          @map("error_code")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([status])
+  @@map("messages")
+}
+
+model WhatsAppTemplate {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  language     String   @default("en")
+  status       String   @default("APPROVED")
+  bodyPreview  String   @map("body_preview")
+  lastSyncedAt DateTime @default(now()) @map("last_synced_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("whatsapp_templates")
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignAudienceType {
+  BROKERS
+  CUSTOMERS
+  PROSPECTS
+  DEVELOPERS
+}
+
+enum CampaignRecipientStatus {
+  PENDING
+  SKIPPED
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  REPLIED
+}
+
+enum CampaignContactType {
+  BROKER
+  CUSTOMER
+  PROSPECT
+  DEVELOPER
+}
+
+model Campaign {
+  id               String               @id @default(cuid())
+  name             String
+  status           CampaignStatus       @default(DRAFT)
+  audienceType     CampaignAudienceType @map("audience_type")
+  audienceFilters  Json                 @default("{}") @map("audience_filters")
+  templateName     String               @map("template_name")
+  templateVariantB String?              @map("template_variant_b")
+  abSplitPercent   Int?                 @map("ab_split_percent")
+  mergeFieldMap    Json                 @default("{}") @map("merge_field_map")
+  scheduledAt      DateTime?            @map("scheduled_at")
+  timezone         String               @default("Asia/Dhaka")
+  rateLimitPerSec  Int                  @default(5) @map("rate_limit_per_sec")
+  startedAt        DateTime?            @map("started_at")
+  completedAt      DateTime?            @map("completed_at")
+  totalRecipients  Int                  @default(0) @map("total_recipients")
+  sentCount        Int                  @default(0) @map("sent_count")
+  deliveredCount   Int                  @default(0) @map("delivered_count")
+  readCount        Int                  @default(0) @map("read_count")
+  failedCount      Int                  @default(0) @map("failed_count")
+  skippedCount     Int                  @default(0) @map("skipped_count")
+  repliedCount     Int                  @default(0) @map("replied_count")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  createdById String    @map("created_by_id")
+  createdBy   StaffUser @relation("CampaignCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  recipients CampaignRecipient[]
+
+  @@index([status])
+  @@index([createdById])
+  @@map("campaigns")
+}
+
+model CampaignRecipient {
+  id           String                   @id @default(cuid())
+  phoneE164    String                   @map("phone_e164")
+  contactType  CampaignContactType      @map("contact_type")
+  contactId    String                   @map("contact_id")
+  templateName String?                  @map("template_name")
+  mergePayload Json                     @default("{}") @map("merge_payload")
+  status       CampaignRecipientStatus  @default(PENDING)
+  skipReason   String?                  @map("skip_reason")
+  bspMessageId String?                  @map("bsp_message_id")
+  messageId    String?                  @map("message_id")
+  sentAt       DateTime?                @map("sent_at")
+  errorCode    String?                  @map("error_code")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+
+  campaignId String   @map("campaign_id")
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@index([phoneE164])
+  @@index([bspMessageId])
+  @@map("campaign_recipients")
+}
+
+model ConsentEvent {
+  id        String   @id @default(cuid())
+  phoneE164 String   @map("phone_e164")
+  action    String
+  source    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([phoneE164])
+  @@map("consent_events")
+}
+
+enum ProjectStatus {
+  PLANNING
+  PRE_LAUNCH
+  SELLING
+  COMPLETED
+}
+
+model Developer {
+  id             String       @id @default(cuid())
+  developerCode  String       @unique @map("developer_code")
+  name           String
+  phone          String
+  phoneE164      String       @unique @map("phone_e164")
+  email          String?
+  companyName    String?      @map("company_name")
+  region         String?
+  activeStatus   ActiveStatus @default(ACTIVE) @map("active_status")
+  optInStatus    Boolean      @default(true) @map("opt_in_status")
+  optInAt        DateTime?    @map("opt_in_at")
+  optInSource    String?      @map("opt_in_source")
+  optOutAt       DateTime?    @map("opt_out_at")
+  optOutSource   String?      @map("opt_out_source")
+  tags           String[]     @default([])
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  projects  Project[]
+  prospects Prospect[] @relation("DeveloperProspects")
+
+  @@index([name])
+  @@map("developers")
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  projectCode    String        @unique @map("project_code")
+  name           String
+  location       String
+  status         ProjectStatus @default(PLANNING)
+  description    String?
+  completionDate DateTime?     @map("completion_date")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  developerId String    @map("developer_id")
+  developer   Developer @relation(fields: [developerId], references: [id], onDelete: Cascade)
+
+  listings Listing[]
+
+  @@index([developerId])
+  @@index([status])
+  @@map("projects")
+}
