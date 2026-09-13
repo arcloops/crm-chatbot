@@ -26,7 +26,8 @@ export type AuthUser = {
 };
 
 export function getApiBase() {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const raw = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  return raw.replace(/\/+$/, "");
 }
 
 export function getToken(): string | null {

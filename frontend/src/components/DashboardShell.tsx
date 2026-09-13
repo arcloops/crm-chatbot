@@ -15,6 +15,7 @@ const NAV: {
 }[] = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/listings", label: "Listings", permission: "listings:read" },
+  { href: "/dashboard/import", label: "Bulk upload" },
   { href: "/dashboard/brokers", label: "Brokers", permission: "contacts:read" },
   { href: "/dashboard/customers", label: "Customers", permission: "contacts:read" },
   { href: "/dashboard/prospects", label: "Prospects", permission: "contacts:read" },

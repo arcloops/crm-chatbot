@@ -16,6 +16,7 @@ import { customerRoutes } from "./routes/customers.js";
 import { developerRoutes } from "./routes/developers.js";
 import { healthRoutes } from "./routes/health.js";
 import { inboxRoutes } from "./routes/inbox.js";
+import { importRoutes } from "./routes/import.js";
 import { lifecycleRoutes } from "./routes/lifecycle.js";
 import { listingRoutes } from "./routes/listings.js";
 import { privacyRoutes } from "./routes/privacy.js";
@@ -84,6 +85,7 @@ export async function createApp() {
   await app.register(inboxRoutes);
   await app.register(privacyRoutes);
   await app.register(cronRoutes);
+  await app.register(importRoutes);
 
   app.get("/", async () => ({
     name: "crm-backend",
