@@ -27,6 +27,9 @@ npm run dev            # API + web
 | Admin  | `admin@arcloops.local`  | `Admin123!ChangeMe`  |
 | Viewer | `viewer@arcloops.local` | `Viewer123!ChangeMe` |
 
+These are created by `npm run db:seed` / `backend/prisma/seed.ts` (bcrypt hashes in Postgres).  
+**Vercel does not store the password.** After Railway deploy, run migrate + seed **once** against that Postgres; then the Vercel login page uses the same email/password because it calls your Railway `/auth/login`. Change the password after first production use.
+
 ## Current phase
 
 Phases **0–13**: CRM, WhatsApp campaigns/bot/inbox, analytics, developer partners, production hardening docs + E2E smoke.
@@ -35,6 +38,7 @@ See also:
 
 - `docs/SCALE_AND_INTEGRATIONS.md`
 - `docs/RUNBOOKS.md`
+- `docs/VERCEL_BACKEND.md`
 - `node scripts/verify-phase1013.js` / `node scripts/e2e-smoke.js` (API must be running)
 
 ## Scripts
