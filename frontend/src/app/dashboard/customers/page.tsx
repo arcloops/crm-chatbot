@@ -1,15 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Alert,
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   statusTone,
@@ -57,6 +58,8 @@ export default function CustomersPage() {
     tags: "",
     optInStatus: "true",
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const res = await apiFetch<{ data: Customer[] }>("/customers");
@@ -82,6 +85,7 @@ export default function CustomersPage() {
       );
       if (!ok) return;
     }
+    setSaving(true);
     try {
       await apiFetch("/customers", {
         method: "POST",
@@ -109,9 +113,12 @@ export default function CustomersPage() {
         tags: "",
         optInStatus: "true",
       });
+      setCreateOpen(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -176,85 +183,127 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Customers" description="Closed / transacted contacts." />
-      {error ? <Alert tone="danger">{error}</Alert> : null}
-
-      {canWrite ? (
-        <Card>
-          <h2 className="mb-3 font-medium">Create customer</h2>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
-            <Field label="Name">
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Phone">
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Transaction">
-              <Select
-                value={form.transactionType}
-                onChange={(e) => setForm({ ...form, transactionType: e.target.value })}
+      <PageHeader
+        title="Customers"
+        description="Closed / transacted contacts."
+        actions={
+          canWrite ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/import?type=customers"
+                className="btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
               >
-                <option value="BOUGHT">BOUGHT</option>
-                <option value="RENTED">RENTED</option>
-                <option value="INVESTED">INVESTED</option>
-              </Select>
-            </Field>
-            <Field label="Listing">
-              <Select
-                value={form.listingId}
-                onChange={(e) => setForm({ ...form, listingId: e.target.value })}
+                Bulk upload
+              </Link>
+              <Button
+                onClick={() => {
+                  setError(null);
+                  setCreateOpen(true);
+                }}
               >
-                <option value="">None</option>
-                {listings.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {(l as { listingCode?: string }).listingCode} —{" "}
-                    {(l as { title?: string }).title}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Assigned broker">
-              <Select
-                value={form.assignedBrokerId}
-                onChange={(e) => setForm({ ...form, assignedBrokerId: e.target.value })}
-              >
-                <option value="">None</option>
-                {brokers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Tags">
-              <Input
-                value={form.tags}
-                onChange={(e) => setForm({ ...form, tags: e.target.value })}
-              />
-            </Field>
-            <Field label="Opt-in">
-              <Select
-                value={form.optInStatus}
-                onChange={(e) => setForm({ ...form, optInStatus: e.target.value })}
-              >
-                <option value="true">Yes</option>
-                <option value="false">No (cascades to suppression)</option>
-              </Select>
-            </Field>
-            <div className="md:col-span-2">
-              <Button type="submit">Create</Button>
+                Create customer
+              </Button>
             </div>
-          </form>
-        </Card>
-      ) : null}
+          ) : null
+        }
+      />
+      {error && !createOpen ? <Alert tone="danger">{error}</Alert> : null}
+
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create customer"
+        wide
+      >
+        {error ? (
+          <div className="mb-3">
+            <Alert tone="danger">{error}</Alert>
+          </div>
+        ) : null}
+        <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
+          <Field label="Name">
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Phone">
+            <Input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Transaction">
+            <Select
+              value={form.transactionType}
+              onChange={(e) => setForm({ ...form, transactionType: e.target.value })}
+            >
+              <option value="BOUGHT">BOUGHT</option>
+              <option value="RENTED">RENTED</option>
+              <option value="INVESTED">INVESTED</option>
+            </Select>
+          </Field>
+          <Field label="Listing">
+            <Select
+              value={form.listingId}
+              onChange={(e) => setForm({ ...form, listingId: e.target.value })}
+            >
+              <option value="">None</option>
+              {listings.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {(l as { listingCode?: string }).listingCode} —{" "}
+                  {(l as { title?: string }).title}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Assigned broker">
+            <Select
+              value={form.assignedBrokerId}
+              onChange={(e) => setForm({ ...form, assignedBrokerId: e.target.value })}
+            >
+              <option value="">None</option>
+              {brokers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Tags">
+            <Input
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+            />
+          </Field>
+          <Field label="Opt-in">
+            <Select
+              value={form.optInStatus}
+              onChange={(e) => setForm({ ...form, optInStatus: e.target.value })}
+            >
+              <option value="true">Yes</option>
+              <option value="false">No (cascades to suppression)</option>
+            </Select>
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create customer"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {rows.length === 0 ? (
         <EmptyState title="No customers yet" description="Create a customer to get started." />

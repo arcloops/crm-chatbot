@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -8,11 +7,13 @@ import { AuthLinkRow, AuthShell } from "@/components/AuthShell";
 import { Alert, Button, Field, Input, Spinner } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 
-export default function LoginPage() {
-  const { login, user, loading } = useAuth();
+export default function SignupPage() {
+  const { signup, user, loading } = useAuth();
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,13 +24,21 @@ export default function LoginPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await login(email, password);
+      await signup(name, email, password);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sign in failed");
+      setError(err instanceof ApiError ? err.message : "Sign up failed");
     } finally {
       setSubmitting(false);
     }
@@ -45,40 +54,41 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title="Sign in"
-      subtitle="Welcome back. Use your staff email to continue."
-      footer={<AuthLinkRow prompt="New here?" href="/signup" label="Create an account" />}
+      title="Create account"
+      subtitle="Set up staff access. First account becomes admin; later accounts start as viewers."
+      footer={<AuthLinkRow prompt="Already have an account?" href="/login" label="Sign in" />}
     >
       <form onSubmit={onSubmit} className="space-y-4">
+        <Field label="Full name">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            placeholder="Your name"
+            required
+            minLength={2}
+          />
+        </Field>
         <Field label="Email">
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
-            autoComplete="username"
+            autoComplete="email"
             placeholder="you@company.com"
             required
           />
         </Field>
-
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-[var(--fg-muted)]">Password</span>
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-[var(--accent)] underline-offset-2 hover:underline"
-            >
-              Forgot password?
-            </Link>
-          </div>
+        <Field label="Password">
           <div className="relative">
             <Input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
               required
+              minLength={8}
               className="pr-16"
             />
             <button
@@ -89,12 +99,23 @@ export default function LoginPage() {
               {showPassword ? "Hide" : "Show"}
             </button>
           </div>
-        </div>
+        </Field>
+        <Field label="Confirm password">
+          <Input
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="Repeat password"
+            required
+            minLength={8}
+          />
+        </Field>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <Button type="submit" disabled={submitting} className="w-full py-2.5">
-          {submitting ? "Signing in…" : "Sign in"}
+          {submitting ? "Creating account…" : "Create account"}
         </Button>
       </form>
     </AuthShell>

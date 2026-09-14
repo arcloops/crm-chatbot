@@ -15,6 +15,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refresh: () => Promise<void>;
 };
@@ -61,6 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   }, []);
 
+  const signup = useCallback(async (name: string, email: string, password: string) => {
+    const result = await apiFetch<{ token: string; user: AuthUser }>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
+    });
+    setToken(result.token);
+    setUser(result.user);
+  }, []);
+
   const logout = useCallback(() => {
     clearToken();
     setUser(null);
@@ -69,8 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, refresh }),
-    [user, loading, login, logout, refresh],
+    () => ({ user, loading, login, signup, logout, refresh }),
+    [user, loading, login, signup, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

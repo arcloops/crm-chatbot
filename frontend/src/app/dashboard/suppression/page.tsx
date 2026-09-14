@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -20,6 +21,9 @@ type Entry = {
   optedOutDate: string;
   source?: string | null;
 };
+
+const bulkUploadClassName =
+  "btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]";
 
 export default function SuppressionPage() {
   const { user } = useAuth();
@@ -103,6 +107,13 @@ export default function SuppressionPage() {
       <PageHeader
         title="Suppression"
         description="Opt-out list. Campaign sends and WhatsApp outbound check this gate. Inbound STOP/UNSUBSCRIBE also cascades here automatically."
+        actions={
+          canWrite ? (
+            <Link href="/dashboard/import?type=suppression" className={bulkUploadClassName}>
+              Bulk upload
+            </Link>
+          ) : null
+        }
       />
       {error ? <Alert tone="danger">{error}</Alert> : null}
 

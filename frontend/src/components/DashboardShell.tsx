@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Spinner } from "@/components/ui";
+import { ThemeToggle } from "@/components/ThemeProvider";
 import { can, type Permission } from "@/lib/api";
 
 type NavItem = {
@@ -19,7 +20,6 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", group: "main" },
   { href: "/dashboard/listings", label: "Listings", permission: "listings:read", group: "inventory" },
-  { href: "/dashboard/import", label: "Bulk upload", group: "inventory" },
   { href: "/dashboard/brokers", label: "Brokers", permission: "contacts:read", group: "people" },
   { href: "/dashboard/customers", label: "Customers", permission: "contacts:read", group: "people" },
   { href: "/dashboard/prospects", label: "Prospects", permission: "contacts:read", group: "people" },
@@ -33,8 +33,6 @@ const NAV: NavItem[] = [
   { href: "/dashboard/campaigns", label: "Campaigns", permission: "campaigns:read", group: "comms" },
   { href: "/dashboard/analytics", label: "Analytics", permission: "campaigns:read", group: "comms" },
   { href: "/dashboard/inbox", label: "Inbox", permission: "inbox:read", group: "comms" },
-  { href: "/dashboard/bot", label: "Bot playground", permission: "inbox:read", group: "comms" },
-  { href: "/dashboard/whatsapp", label: "WhatsApp Lab", permission: "contacts:read", group: "comms" },
   { href: "/dashboard/settings", label: "Settings", adminOnly: true, group: "admin" },
   { href: "/dashboard/staff", label: "Staff", permission: "staff:read", adminOnly: true, group: "admin" },
 ];
@@ -47,12 +45,14 @@ const GROUP_LABELS: Record<NavItem["group"], string | null> = {
   admin: "Admin",
 };
 
+const FULL_BLEED = new Set(["/dashboard/inbox", "/dashboard/bot"]);
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [q, setQ] = useState("");
   const [navOpen, setNavOpen] = useState(false);
+  const fullBleed = FULL_BLEED.has(pathname);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -64,7 +64,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
+      <div className="flex h-dvh items-center justify-center bg-[var(--bg)]">
         <Spinner label="Loading workspace…" />
       </div>
     );
@@ -76,13 +76,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     if (item.permission && !can(user, item.permission)) return false;
     return true;
   });
-
-  function onSearch(e: FormEvent) {
-    e.preventDefault();
-    const term = q.trim();
-    if (term.length < 2) return;
-    router.push(`/dashboard/search?q=${encodeURIComponent(term)}`);
-  }
 
   function renderNav() {
     let lastGroup: NavItem["group"] | null = null;
@@ -125,10 +118,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           ) : null}
           <Link
             href={item.href}
-            className={`relative block rounded-[var(--radius-sm)] px-3 py-2 text-sm transition-colors duration-[var(--duration-fast)] ease-[var(--ease)] ${
+            className={`nav-link relative block rounded-[var(--radius-sm)] px-3 py-2 text-sm ${
               active
-                ? "bg-[var(--accent-muted)] font-medium text-[var(--accent)]"
-                : "text-[var(--fg-muted)] hover:bg-slate-100 hover:text-[var(--fg)]"
+                ? "nav-link-active bg-[var(--accent-muted)] font-medium text-[var(--accent)]"
+                : "text-[var(--fg-muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--fg)]"
             }`}
           >
             {active ? (
@@ -147,9 +140,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const brandBlock = (
     <div className="border-b border-[var(--border)] px-4 py-4">
       <p className="font-display text-xl font-semibold tracking-tight text-[var(--fg)]">
-        Arcloops
+        arXcrm
       </p>
-      <p className="text-xs font-medium tracking-wide text-[var(--fg-muted)]">CRM</p>
       <p className="mt-2 truncate text-sm text-[var(--fg-muted)]">
         {user.name}
         <span className="text-[var(--fg-faint)]"> · {user.role}</span>
@@ -158,11 +150,38 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   );
 
   const navBlock = (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">{renderNav()}</nav>
+    <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+      <div className="flex flex-col gap-0.5">{renderNav()}</div>
+    </nav>
   );
 
+  const chatActive = pathname.startsWith("/dashboard/bot");
+  const canChat = can(user, "inbox:read");
+
   const logoutBlock = (
-    <div className="border-t border-[var(--border)] p-3">
+    <div className="space-y-2 border-t border-[var(--border)] p-3">
+      {canChat ? (
+        <Link
+          href="/dashboard/bot"
+          className={`nav-link relative block rounded-[var(--radius-sm)] px-3 py-2 text-sm ${
+            chatActive
+              ? "nav-link-active bg-[var(--accent-muted)] font-medium text-[var(--accent)]"
+              : "text-[var(--fg-muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--fg)]"
+          }`}
+        >
+          {chatActive ? (
+            <span
+              className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--accent)]"
+              aria-hidden
+            />
+          ) : null}
+          Chat
+        </Link>
+      ) : null}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <span className="text-xs text-[var(--fg-muted)]">Theme</span>
+        <ThemeToggle />
+      </div>
       <Button variant="secondary" onClick={logout} className="w-full">
         Log out
       </Button>
@@ -170,66 +189,68 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg)] text-[var(--fg)]">
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:flex">
-        {brandBlock}
+    <div className="app-shell flex h-dvh overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+      <aside className="glass-panel metal-edge hidden h-full w-56 shrink-0 flex-col overflow-hidden border-r border-[var(--border)] md:flex">
+        <div className="shrink-0">{brandBlock}</div>
         {navBlock}
-        {logoutBlock}
+        <div className="shrink-0">{logoutBlock}</div>
       </aside>
 
       {navOpen ? (
         <div className="fixed inset-0 z-40 md:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/40"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             aria-label="Close menu"
             onClick={() => setNavOpen(false)}
           />
-          <aside className="relative z-50 flex h-full w-64 max-w-[85vw] flex-col bg-[var(--surface)] shadow-[var(--shadow-md)]">
-            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+          <aside className="glass-panel metal-edge relative z-50 flex h-full w-64 max-w-[85vw] flex-col overflow-hidden shadow-[var(--shadow-glow)]">
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--border)] px-4 py-3">
               <div>
-                <p className="font-display text-lg font-semibold">Arcloops</p>
+                <p className="font-display text-lg font-semibold">arXcrm</p>
                 <p className="text-xs text-[var(--fg-muted)]">
                   {user.name} · {user.role}
                 </p>
               </div>
               <button
                 type="button"
-                className="rounded-[var(--radius-sm)] px-2 py-1 text-sm text-[var(--fg-muted)] hover:bg-slate-100"
+                className="rounded-[var(--radius-sm)] px-2 py-1 text-sm text-[var(--fg-muted)] hover:bg-[var(--surface-elevated)]"
                 onClick={() => setNavOpen(false)}
               >
                 Close
               </button>
             </div>
             {navBlock}
-            {logoutBlock}
+            <div className="shrink-0">{logoutBlock}</div>
           </aside>
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface)]/95 px-4 py-3 backdrop-blur-sm sm:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-slate-50 md:hidden"
-              onClick={() => setNavOpen(true)}
-              aria-label="Open menu"
-            >
-              Menu
-            </button>
-            <form onSubmit={onSearch} className="flex min-w-0 max-w-xl flex-1 gap-2">
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search listings, brokers, customers, prospects…"
-                className="py-2.5"
-              />
-              <Button type="submit">Search</Button>
-            </form>
-          </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="glass-panel z-30 flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4 py-2.5 md:hidden">
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 py-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-elevated)]"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open menu"
+          >
+            Menu
+          </button>
+          <p className="min-w-0 flex-1 font-display text-base font-semibold text-[var(--fg)]">
+            arXcrm
+          </p>
+          <ThemeToggle />
         </header>
-        <main className="page-enter min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main
+          key={pathname}
+          className={`page-enter min-h-0 min-w-0 flex-1 ${
+            fullBleed
+              ? "overflow-hidden p-0"
+              : "overflow-y-auto px-4 py-6 sm:px-6"
+          }`}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

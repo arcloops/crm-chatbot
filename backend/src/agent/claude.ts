@@ -10,6 +10,8 @@ export class ClaudeAgent implements AgentProvider {
     phoneE164: string;
     userText: string;
     history?: AgentMessage[];
+    channel?: "whatsapp" | "dashboard";
+    staffName?: string;
   }): Promise<AgentReply> {
     const apiKey = env().ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -33,11 +35,20 @@ export class ClaudeAgent implements AgentProvider {
           content: m.content,
         }));
 
+      const isDashboard = input.channel === "dashboard";
+      const staff = input.staffName?.trim() || "staff";
+      const userContent = isDashboard
+        ? `Staff user (${staff}) asks: ${input.userText}\n\nInventory:\n${JSON.stringify(listings)}\n\nRespond helpfully for CRM staff.`
+        : `Prospect message: ${input.userText}\n\nInventory:\n${JSON.stringify(listings)}\n\nRespond with a helpful WhatsApp message.`;
+      const system = isDashboard
+        ? "You are the arXcrm property assistant for logged-in CRM staff. Only recommend listings from the provided inventory JSON. Never invent prices or addresses. Be concise and practical."
+        : "You are arXcrm property assistant. Only recommend listings from the provided inventory JSON. Never invent prices or addresses. If unsure, say so. Keep replies concise for WhatsApp.";
+
       const messages = [
         ...prior,
         {
           role: "user" as const,
-          content: `Prospect message: ${input.userText}\n\nInventory:\n${JSON.stringify(listings)}\n\nRespond with a helpful WhatsApp message.`,
+          content: userContent,
         },
       ];
 
@@ -51,8 +62,7 @@ export class ClaudeAgent implements AgentProvider {
         body: JSON.stringify({
           model: "claude-3-5-haiku-latest",
           max_tokens: 512,
-          system:
-            "You are Arcloops property assistant. Only recommend listings from the provided inventory JSON. Never invent prices or addresses. If unsure, say so. Keep replies concise for WhatsApp.",
+          system,
           messages,
         }),
       });

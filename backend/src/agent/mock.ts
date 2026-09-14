@@ -8,6 +8,8 @@ export class MockAgent implements AgentProvider {
     phoneE164: string;
     userText: string;
     history?: import("./types.js").AgentMessage[];
+    channel?: "whatsapp" | "dashboard";
+    staffName?: string;
   }): Promise<AgentReply> {
     const extracted = extractProspectFields(input.userText);
 

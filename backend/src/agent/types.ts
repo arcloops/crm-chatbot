@@ -30,5 +30,7 @@ export interface AgentProvider {
     phoneE164: string;
     userText: string;
     history?: AgentMessage[];
+    channel?: "whatsapp" | "dashboard";
+    staffName?: string;
   }): Promise<AgentReply>;
 }

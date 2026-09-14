@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -10,6 +11,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   statusTone,
@@ -60,6 +62,8 @@ export default function BrokersPage() {
     tags: "",
     optInStatus: "true",
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const res = await apiFetch<{ data: Broker[] }>("/brokers");
@@ -94,6 +98,7 @@ export default function BrokersPage() {
       );
       if (!ok) return;
     }
+    setSaving(true);
     try {
       await apiFetch("/brokers", {
         method: "POST",
@@ -117,9 +122,12 @@ export default function BrokersPage() {
         tags: "",
         optInStatus: "true",
       });
+      setCreateOpen(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -151,55 +159,97 @@ export default function BrokersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Brokers" description="Internal partners and agents." />
-      {error ? <Alert tone="danger">{error}</Alert> : null}
-
-      {canWrite ? (
-        <Card>
-          <h2 className="mb-3 font-medium">Create broker</h2>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
-            <Field label="Name">
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Phone">
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                required
-                placeholder="017..."
-              />
-            </Field>
-            <Field label="Region">
-              <Input
-                value={form.regionArea}
-                onChange={(e) => setForm({ ...form, regionArea: e.target.value })}
-              />
-            </Field>
-            <Field label="Tags">
-              <Input
-                value={form.tags}
-                onChange={(e) => setForm({ ...form, tags: e.target.value })}
-              />
-            </Field>
-            <Field label="Opt-in">
-              <Select
-                value={form.optInStatus}
-                onChange={(e) => setForm({ ...form, optInStatus: e.target.value })}
+      <PageHeader
+        title="Brokers"
+        description="Internal partners and agents."
+        actions={
+          canWrite ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/import?type=brokers"
+                className="btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
               >
-                <option value="true">Yes</option>
-                <option value="false">No (cascades to suppression)</option>
-              </Select>
-            </Field>
-            <div className="flex items-end">
-              <Button type="submit">Create</Button>
+                Bulk upload
+              </Link>
+              <Button
+                onClick={() => {
+                  setError(null);
+                  setCreateOpen(true);
+                }}
+              >
+                Create broker
+              </Button>
             </div>
-          </form>
-        </Card>
-      ) : null}
+          ) : null
+        }
+      />
+      {error && !createOpen ? <Alert tone="danger">{error}</Alert> : null}
+
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create broker"
+        wide
+      >
+        {error ? (
+          <div className="mb-3">
+            <Alert tone="danger">{error}</Alert>
+          </div>
+        ) : null}
+        <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
+          <Field label="Name">
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Phone">
+            <Input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              required
+              placeholder="017..."
+            />
+          </Field>
+          <Field label="Region">
+            <Input
+              value={form.regionArea}
+              onChange={(e) => setForm({ ...form, regionArea: e.target.value })}
+            />
+          </Field>
+          <Field label="Tags">
+            <Input
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+            />
+          </Field>
+          <Field label="Opt-in">
+            <Select
+              value={form.optInStatus}
+              onChange={(e) => setForm({ ...form, optInStatus: e.target.value })}
+            >
+              <option value="true">Yes</option>
+              <option value="false">No (cascades to suppression)</option>
+            </Select>
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create broker"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Card>
         <h2 className="mb-3 font-medium">Workload</h2>

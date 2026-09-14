@@ -86,7 +86,13 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (res.status === 401 && typeof window !== "undefined") {
     clearToken();
-    if (!window.location.pathname.startsWith("/login")) {
+    const path = window.location.pathname;
+    const onAuthPage =
+      path.startsWith("/login") ||
+      path.startsWith("/signup") ||
+      path.startsWith("/forgot-password") ||
+      path.startsWith("/reset-password");
+    if (!onAuthPage) {
       window.location.href = "/login";
     }
   }

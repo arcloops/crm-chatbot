@@ -11,6 +11,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   statusTone,
@@ -79,6 +80,8 @@ export default function ListingsPage() {
   const [activeOnly, setActiveOnly] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const qs = new URLSearchParams();
@@ -99,6 +102,7 @@ export default function ListingsPage() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setSaving(true);
     try {
       await apiFetch("/listings", {
         method: "POST",
@@ -129,9 +133,12 @@ export default function ListingsPage() {
         }),
       });
       setForm(emptyForm);
+      setCreateOpen(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -145,8 +152,28 @@ export default function ListingsPage() {
       <PageHeader
         title="Listings"
         description="Inventory source of truth. Photo fields accept HTTPS URLs."
+        actions={
+          canWrite ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/import?type=listings"
+                className="btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
+              >
+                Bulk upload
+              </Link>
+              <Button
+                onClick={() => {
+                  setError(null);
+                  setCreateOpen(true);
+                }}
+              >
+                Create listing
+              </Button>
+            </div>
+          ) : null
+        }
       />
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {error && !createOpen ? <Alert tone="danger">{error}</Alert> : null}
 
       <Card>
         <div className="grid gap-3 md:grid-cols-4">
@@ -178,121 +205,140 @@ export default function ListingsPage() {
         </div>
       </Card>
 
-      {canWrite ? (
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold text-[var(--fg)]">Create listing</h2>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
-            <Field label="Title">
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Location">
-              <Input
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Category">
-              <Select
-                value={form.propertyCategory}
-                onChange={(e) => setForm({ ...form, propertyCategory: e.target.value })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Transaction">
-              <Select
-                value={form.transactionType}
-                onChange={(e) => setForm({ ...form, transactionType: e.target.value })}
-              >
-                {TRANSACTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Price">
-              <Input
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Status">
-              <Select
-                value={form.availabilityStatus}
-                onChange={(e) => setForm({ ...form, availabilityStatus: e.target.value })}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Bedrooms">
-              <Input
-                type="number"
-                value={form.bedrooms}
-                onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
-              />
-            </Field>
-            <Field label="Bathrooms">
-              <Input
-                type="number"
-                value={form.bathrooms}
-                onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
-              />
-            </Field>
-            <Field label="Amenities (comma-separated)">
-              <Input
-                value={form.amenities}
-                onChange={(e) => setForm({ ...form, amenities: e.target.value })}
-              />
-            </Field>
-            <Field label="Photo URLs (comma-separated HTTPS)">
-              <Input
-                value={form.photos}
-                onChange={(e) => setForm({ ...form, photos: e.target.value })}
-                placeholder="https://..."
-              />
-            </Field>
-            <Field label="Broker">
-              <Select
-                value={form.brokerId}
-                onChange={(e) => setForm({ ...form, brokerId: e.target.value })}
-              >
-                <option value="">None</option>
-                {brokers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Description">
-              <TextArea
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </Field>
-            <div className="md:col-span-2">
-              <Button type="submit">Create listing</Button>
-            </div>
-          </form>
-        </Card>
-      ) : null}
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create listing"
+        wide
+      >
+        {error ? (
+          <div className="mb-3">
+            <Alert tone="danger">{error}</Alert>
+          </div>
+        ) : null}
+        <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
+          <Field label="Title">
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Location">
+            <Input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Category">
+            <Select
+              value={form.propertyCategory}
+              onChange={(e) => setForm({ ...form, propertyCategory: e.target.value })}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Transaction">
+            <Select
+              value={form.transactionType}
+              onChange={(e) => setForm({ ...form, transactionType: e.target.value })}
+            >
+              {TRANSACTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Price">
+            <Input
+              type="number"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Status">
+            <Select
+              value={form.availabilityStatus}
+              onChange={(e) => setForm({ ...form, availabilityStatus: e.target.value })}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Bedrooms">
+            <Input
+              type="number"
+              value={form.bedrooms}
+              onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
+            />
+          </Field>
+          <Field label="Bathrooms">
+            <Input
+              type="number"
+              value={form.bathrooms}
+              onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
+            />
+          </Field>
+          <Field label="Amenities (comma-separated)">
+            <Input
+              value={form.amenities}
+              onChange={(e) => setForm({ ...form, amenities: e.target.value })}
+            />
+          </Field>
+          <Field label="Photo URLs (comma-separated HTTPS)">
+            <Input
+              value={form.photos}
+              onChange={(e) => setForm({ ...form, photos: e.target.value })}
+              placeholder="https://..."
+            />
+          </Field>
+          <Field label="Broker">
+            <Select
+              value={form.brokerId}
+              onChange={(e) => setForm({ ...form, brokerId: e.target.value })}
+            >
+              <option value="">None</option>
+              {brokers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Description">
+            <TextArea
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create listing"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {rows.length === 0 ? (
         <EmptyState

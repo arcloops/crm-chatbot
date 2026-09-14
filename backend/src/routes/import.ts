@@ -13,6 +13,7 @@ import { parseBool, parseCsv, splitTags } from "../lib/csv.js";
 import { prisma } from "../lib/db.js";
 import { nextCode } from "../lib/ids.js";
 import { normalizePhone } from "../lib/phone.js";
+import { cascadeOptOut } from "../lib/suppression.js";
 import { authenticate, requirePermission } from "../plugins/auth.js";
 
 const importBody = z.object({
@@ -91,6 +92,10 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
         sample:
           "name,phone,preferredLocation,intent,leadStage,leadSource,budgetMax,optInStatus,tags\n" +
           "Rafi Prospect,01711000777,Banani,BUY,NEW,csv_import,9000000,true,hot",
+      },
+      suppression: {
+        headers: ["phone", "source"],
+        sample: "phone,source\n" + "01711000666,csv_import\n" + "8801711000555,manual_list",
       },
     }),
   );
@@ -409,6 +414,59 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         type: "prospects",
+        total: rows.length,
+        created,
+        failed: rows.length - created,
+        results,
+      };
+    },
+  );
+
+  app.post(
+    "/import/suppression",
+    { preHandler: requirePermission("suppression:write") },
+    async (request, reply) => {
+      const parsed = importBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: "csv string required" });
+      }
+      const { rows } = parseCsv(parsed.data.csv);
+      if (!rows.length) {
+        return reply.status(400).send({ error: "No data rows in CSV" });
+      }
+      if (rows.length > 500) {
+        return reply.status(400).send({ error: "Max 500 rows per import" });
+      }
+
+      const results: RowResult[] = [];
+      let created = 0;
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNum = i + 2;
+        try {
+          const phone = row.phone || row.Phone;
+          if (!phone) throw new Error("phone is required");
+          const source = (row.source || row.Source || "csv_import").trim() || "csv_import";
+          const cascade = await cascadeOptOut(phone, source);
+          created++;
+          results.push({
+            row: rowNum,
+            ok: true,
+            id: cascade.phoneE164,
+            code: cascade.phoneE164,
+          });
+        } catch (error) {
+          results.push({
+            row: rowNum,
+            ok: false,
+            error: error instanceof Error ? error.message : "Failed",
+          });
+        }
+      }
+
+      return {
+        type: "suppression",
         total: rows.length,
         created,
         failed: rows.length - created,

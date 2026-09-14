@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -10,6 +11,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   statusTone,
@@ -62,6 +64,8 @@ export default function ProspectsPage() {
     leadSource: "manual",
     tags: "",
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const qs = stageFilter ? `?stage=${stageFilter}` : "";
@@ -79,6 +83,7 @@ export default function ProspectsPage() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setSaving(true);
     try {
       await apiFetch("/prospects", {
         method: "POST",
@@ -112,9 +117,12 @@ export default function ProspectsPage() {
         leadSource: "manual",
         tags: "",
       });
+      setCreateOpen(false);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -179,8 +187,31 @@ export default function ProspectsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Prospects" description="Leads not yet transacted." />
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      <PageHeader
+        title="Prospects"
+        description="Leads not yet transacted."
+        actions={
+          canWrite ? (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/import?type=prospects"
+                className="btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
+              >
+                Bulk upload
+              </Link>
+              <Button
+                onClick={() => {
+                  setError(null);
+                  setCreateOpen(true);
+                }}
+              >
+                Create prospect
+              </Button>
+            </div>
+          ) : null
+        }
+      />
+      {error && !createOpen ? <Alert tone="danger">{error}</Alert> : null}
 
       <Card>
         <div className="flex flex-wrap items-end gap-3">
@@ -198,85 +229,104 @@ export default function ProspectsPage() {
         </div>
       </Card>
 
-      {canWrite ? (
-        <Card>
-          <h2 className="mb-3 font-medium">Create prospect</h2>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
-            <Field label="Name">
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Phone">
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Preferred location">
-              <Input
-                value={form.preferredLocation}
-                onChange={(e) => setForm({ ...form, preferredLocation: e.target.value })}
-              />
-            </Field>
-            <Field label="Intent">
-              <Select
-                value={form.intent}
-                onChange={(e) => setForm({ ...form, intent: e.target.value })}
-              >
-                <option value="BUY">BUY</option>
-                <option value="RENT">RENT</option>
-                <option value="INVEST">INVEST</option>
-              </Select>
-            </Field>
-            <Field label="Stage">
-              <Select
-                value={form.leadStage}
-                onChange={(e) => setForm({ ...form, leadStage: e.target.value })}
-              >
-                {STAGES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Assigned broker">
-              <Select
-                value={form.assignedBrokerId}
-                onChange={(e) => setForm({ ...form, assignedBrokerId: e.target.value })}
-              >
-                <option value="">None</option>
-                {brokers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Budget min">
-              <Input
-                type="number"
-                value={form.budgetMin}
-                onChange={(e) => setForm({ ...form, budgetMin: e.target.value })}
-              />
-            </Field>
-            <Field label="Budget max">
-              <Input
-                type="number"
-                value={form.budgetMax}
-                onChange={(e) => setForm({ ...form, budgetMax: e.target.value })}
-              />
-            </Field>
-            <div className="md:col-span-2">
-              <Button type="submit">Create</Button>
-            </div>
-          </form>
-        </Card>
-      ) : null}
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create prospect"
+        wide
+      >
+        {error ? (
+          <div className="mb-3">
+            <Alert tone="danger">{error}</Alert>
+          </div>
+        ) : null}
+        <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
+          <Field label="Name">
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Phone">
+            <Input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Preferred location">
+            <Input
+              value={form.preferredLocation}
+              onChange={(e) => setForm({ ...form, preferredLocation: e.target.value })}
+            />
+          </Field>
+          <Field label="Intent">
+            <Select
+              value={form.intent}
+              onChange={(e) => setForm({ ...form, intent: e.target.value })}
+            >
+              <option value="BUY">BUY</option>
+              <option value="RENT">RENT</option>
+              <option value="INVEST">INVEST</option>
+            </Select>
+          </Field>
+          <Field label="Stage">
+            <Select
+              value={form.leadStage}
+              onChange={(e) => setForm({ ...form, leadStage: e.target.value })}
+            >
+              {STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Assigned broker">
+            <Select
+              value={form.assignedBrokerId}
+              onChange={(e) => setForm({ ...form, assignedBrokerId: e.target.value })}
+            >
+              <option value="">None</option>
+              {brokers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Budget min">
+            <Input
+              type="number"
+              value={form.budgetMin}
+              onChange={(e) => setForm({ ...form, budgetMin: e.target.value })}
+            />
+          </Field>
+          <Field label="Budget max">
+            <Input
+              type="number"
+              value={form.budgetMax}
+              onChange={(e) => setForm({ ...form, budgetMax: e.target.value })}
+            />
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create prospect"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {rows.length === 0 ? (
         <EmptyState

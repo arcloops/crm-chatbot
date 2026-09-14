@@ -11,7 +11,6 @@ const historyItem = z.object({
 
 const chatSchema = z.object({
   message: z.string().min(1).max(4000),
-  phoneE164: z.string().min(5).max(20).optional(),
   history: z.array(historyItem).max(40).optional(),
 });
 
@@ -37,12 +36,15 @@ export const agentRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: parsed.error.flatten() });
       }
 
-      const phoneE164 = parsed.data.phoneE164 ?? "+8801999000001";
+      const staff = request.authUser!;
       const agent = getAgent();
       const result = await agent.reply({
-        phoneE164,
+        // Internal session key only — dashboard chat is staff↔Anthropic, not WhatsApp.
+        phoneE164: `staff:${staff.sub}`,
         userText: parsed.data.message,
         history: parsed.data.history,
+        channel: "dashboard",
+        staffName: staff.name || staff.email,
       });
 
       return {
@@ -53,6 +55,7 @@ export const agentRoutes: FastifyPluginAsync = async (app) => {
         bookViewing: Boolean(result.bookViewing),
         extracted: result.extracted ?? null,
         listings: result.listings ?? [],
+        staff: { id: staff.sub, name: staff.name, email: staff.email },
       };
     },
   );

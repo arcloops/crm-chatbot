@@ -7,10 +7,10 @@ import {
   Alert,
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   Input,
+  Modal,
   PageHeader,
   Select,
   statusTone,
@@ -48,6 +48,8 @@ export default function CampaignsPage() {
     rateLimitPerSec: "5",
     scheduledAt: "",
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const res = await apiFetch<{ data: Campaign[] }>("/campaigns");
@@ -69,6 +71,7 @@ export default function CampaignsPage() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setSaving(true);
     try {
       const created = await apiFetch<Campaign>("/campaigns", {
         method: "POST",
@@ -96,10 +99,13 @@ export default function CampaignsPage() {
         rateLimitPerSec: "5",
         scheduledAt: "",
       });
+      setCreateOpen(false);
       await load();
       window.location.href = `/dashboard/campaigns/${created.id}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -108,91 +114,122 @@ export default function CampaignsPage() {
       <PageHeader
         title="Campaigns"
         description="Segmented WhatsApp broadcasts with suppression and opt-in gates."
+        actions={
+          canWrite ? (
+            <Button
+              onClick={() => {
+                setError(null);
+                setCreateOpen(true);
+              }}
+            >
+              Create campaign
+            </Button>
+          ) : null
+        }
       />
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {error && !createOpen ? <Alert tone="danger">{error}</Alert> : null}
 
-      {canWrite ? (
-        <Card>
-          <h2 className="mb-3 font-medium">Create campaign</h2>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
-            <Field label="Name">
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label="Audience">
-              <Select
-                value={form.audienceType}
-                onChange={(e) => setForm({ ...form, audienceType: e.target.value })}
-              >
-                <option value="PROSPECTS">PROSPECTS</option>
-                <option value="CUSTOMERS">CUSTOMERS</option>
-                <option value="BROKERS">BROKERS</option>
-                <option value="DEVELOPERS">DEVELOPERS</option>
-              </Select>
-            </Field>
-            <Field label="Developer ID filter (optional)">
-              <Input
-                value={form.developerId}
-                onChange={(e) => setForm({ ...form, developerId: e.target.value })}
-                placeholder="For PROSPECTS/DEVELOPERS audience"
-              />
-            </Field>
-            <Field label="Template">
-              <Select
-                value={form.templateName}
-                onChange={(e) => setForm({ ...form, templateName: e.target.value })}
-                required
-              >
-                {templates.map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="A/B variant B (optional)">
-              <Select
-                value={form.templateVariantB}
-                onChange={(e) => setForm({ ...form, templateVariantB: e.target.value })}
-              >
-                <option value="">None</option>
-                {templates.map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="A/B split % for A">
-              <Input
-                type="number"
-                value={form.abSplitPercent}
-                onChange={(e) => setForm({ ...form, abSplitPercent: e.target.value })}
-              />
-            </Field>
-            <Field label="Rate limit / sec">
-              <Input
-                type="number"
-                value={form.rateLimitPerSec}
-                onChange={(e) => setForm({ ...form, rateLimitPerSec: e.target.value })}
-              />
-            </Field>
-            <Field label="Schedule (optional)">
-              <Input
-                type="datetime-local"
-                value={form.scheduledAt}
-                onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-              />
-            </Field>
-            <div className="flex items-end">
-              <Button type="submit">Create draft</Button>
-            </div>
-          </form>
-        </Card>
-      ) : null}
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create campaign"
+        wide
+      >
+        {error ? (
+          <div className="mb-3">
+            <Alert tone="danger">{error}</Alert>
+          </div>
+        ) : null}
+        <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
+          <Field label="Name">
+            <Input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Audience">
+            <Select
+              value={form.audienceType}
+              onChange={(e) => setForm({ ...form, audienceType: e.target.value })}
+            >
+              <option value="PROSPECTS">PROSPECTS</option>
+              <option value="CUSTOMERS">CUSTOMERS</option>
+              <option value="BROKERS">BROKERS</option>
+              <option value="DEVELOPERS">DEVELOPERS</option>
+            </Select>
+          </Field>
+          <Field label="Developer ID filter (optional)">
+            <Input
+              value={form.developerId}
+              onChange={(e) => setForm({ ...form, developerId: e.target.value })}
+              placeholder="For PROSPECTS/DEVELOPERS audience"
+            />
+          </Field>
+          <Field label="Template">
+            <Select
+              value={form.templateName}
+              onChange={(e) => setForm({ ...form, templateName: e.target.value })}
+              required
+            >
+              {templates.map((t) => (
+                <option key={t.name} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="A/B variant B (optional)">
+            <Select
+              value={form.templateVariantB}
+              onChange={(e) => setForm({ ...form, templateVariantB: e.target.value })}
+            >
+              <option value="">None</option>
+              {templates.map((t) => (
+                <option key={t.name} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="A/B split % for A">
+            <Input
+              type="number"
+              value={form.abSplitPercent}
+              onChange={(e) => setForm({ ...form, abSplitPercent: e.target.value })}
+            />
+          </Field>
+          <Field label="Rate limit / sec">
+            <Input
+              type="number"
+              value={form.rateLimitPerSec}
+              onChange={(e) => setForm({ ...form, rateLimitPerSec: e.target.value })}
+            />
+          </Field>
+          <Field label="Schedule (optional)">
+            <Input
+              type="datetime-local"
+              value={form.scheduledAt}
+              onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+            />
+          </Field>
+          <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create draft"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {rows.length === 0 ? (
         <EmptyState

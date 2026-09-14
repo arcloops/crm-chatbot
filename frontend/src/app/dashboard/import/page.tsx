@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import {
   Alert,
@@ -17,7 +19,7 @@ import {
 } from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
-type ImportType = "listings" | "brokers" | "customers" | "prospects";
+type ImportType = "listings" | "brokers" | "customers" | "prospects" | "suppression";
 
 type Templates = Record<
   ImportType,
@@ -41,16 +43,42 @@ type ImportResult = {
 const TYPE_META: {
   id: ImportType;
   label: string;
-  permission: "listings:write" | "contacts:write";
+  permission: "listings:write" | "contacts:write" | "suppression:write";
+  backHref: string;
 }[] = [
-  { id: "listings", label: "Listings", permission: "listings:write" },
-  { id: "brokers", label: "Brokers", permission: "contacts:write" },
-  { id: "customers", label: "Customers", permission: "contacts:write" },
-  { id: "prospects", label: "Prospects", permission: "contacts:write" },
+  { id: "listings", label: "Listings", permission: "listings:write", backHref: "/dashboard/listings" },
+  { id: "brokers", label: "Brokers", permission: "contacts:write", backHref: "/dashboard/brokers" },
+  { id: "customers", label: "Customers", permission: "contacts:write", backHref: "/dashboard/customers" },
+  { id: "prospects", label: "Prospects", permission: "contacts:write", backHref: "/dashboard/prospects" },
+  {
+    id: "suppression",
+    label: "Suppression",
+    permission: "suppression:write",
+    backHref: "/dashboard/suppression",
+  },
 ];
 
+function isImportType(value: string | null): value is ImportType {
+  return (
+    value === "listings" ||
+    value === "brokers" ||
+    value === "customers" ||
+    value === "prospects" ||
+    value === "suppression"
+  );
+}
+
 export default function ImportPage() {
+  return (
+    <Suspense fallback={<Spinner label="Loading import…" />}>
+      <ImportInner />
+    </Suspense>
+  );
+}
+
+function ImportInner() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [templates, setTemplates] = useState<Templates | null>(null);
   const [type, setType] = useState<ImportType>("listings");
   const [csv, setCsv] = useState("");
@@ -60,6 +88,15 @@ export default function ImportPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const allowedTypes = TYPE_META.filter((t) => can(user, t.permission));
+  const activeMeta = useMemo(
+    () => TYPE_META.find((t) => t.id === type) ?? TYPE_META[0],
+    [type],
+  );
+
+  useEffect(() => {
+    const q = searchParams.get("type");
+    if (isImportType(q)) setType(q);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!allowedTypes.length) return;
@@ -123,7 +160,7 @@ export default function ImportPage() {
   if (!allowedTypes.length) {
     return (
       <p className="text-sm text-[var(--fg-muted)]">
-        You need listings:write or contacts:write to import CSV files.
+        You need listings:write, contacts:write, or suppression:write to import CSV files.
       </p>
     );
   }
@@ -131,8 +168,20 @@ export default function ImportPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Bulk upload"
-        description="Import listings or contacts from a CSV file (max 500 rows). Download a template, fill it, then upload."
+        title={`Bulk upload ${activeMeta.label.toLowerCase()}`}
+        description={
+          type === "suppression"
+            ? "Import phones to the opt-out list (max 500 rows). Each row cascades opt-out across contacts."
+            : "Import from a CSV file (max 500 rows). Download a template, fill it, then upload."
+        }
+        actions={
+          <Link
+            href={activeMeta.backHref}
+            className="btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)]/80 px-3 py-1.5 text-sm font-medium text-[var(--fg)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
+          >
+            Back to {activeMeta.label.toLowerCase()}
+          </Link>
+        }
       />
 
       {error ? <Alert tone="danger">{error}</Alert> : null}

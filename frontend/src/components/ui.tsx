@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, type ReactNode } from "react";
 
 export function PageHeader({
   title,
@@ -33,7 +33,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-fast)] ease-[var(--ease)] hover:shadow-[var(--shadow-md)] ${className}`}
+      className={`rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]/90 p-4 shadow-[var(--shadow-sm)] backdrop-blur-sm transition-all duration-[var(--duration)] ease-[var(--ease)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] ${className}`}
     >
       {children}
     </div>
@@ -57,16 +57,16 @@ export function Button({
 }) {
   const styles =
     variant === "primary"
-      ? "bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)]"
+      ? "bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)] shadow-[var(--shadow-sm)]"
       : variant === "danger"
-        ? "bg-[var(--danger)] text-white hover:bg-red-500"
-        : "border border-[var(--border)] bg-[var(--surface)] text-[var(--fg)] hover:bg-[var(--bg)]";
+        ? "bg-[var(--danger)] text-white hover:brightness-110"
+        : "border border-[var(--border)] bg-[var(--surface)]/80 text-[var(--fg)] backdrop-blur-sm hover:bg-[var(--surface-elevated)]";
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium transition-colors duration-[var(--duration-fast)] ease-[var(--ease)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${styles} ${className}`}
+      className={`btn-shine inline-flex items-center justify-center rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium transition-all duration-[var(--duration-fast)] ease-[var(--ease)] hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] disabled:pointer-events-none disabled:opacity-50 disabled:hover:scale-100 ${styles} ${className}`}
     >
       {children}
     </button>
@@ -74,7 +74,7 @@ export function Button({
 }
 
 const controlClass =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--fg)] transition-colors duration-[var(--duration-fast)] ease-[var(--ease)] placeholder:text-[var(--fg-faint)] hover:border-slate-300 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-elevated)]/90 px-3 py-2 text-sm text-[var(--fg)] shadow-[var(--shadow-sm)] backdrop-blur-sm transition-all duration-[var(--duration-fast)] ease-[var(--ease)] placeholder:text-[var(--fg-faint)] hover:border-[var(--fg-faint)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)] focus:shadow-[var(--shadow-glow)]";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -103,10 +103,12 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   );
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <label className="block space-y-1 text-sm">
-      <span className="font-medium text-[var(--fg-muted)]">{label}</span>
+      <span className="flex items-center justify-between gap-2 font-medium text-[var(--fg-muted)]">
+        {label}
+      </span>
       {children}
     </label>
   );
@@ -116,7 +118,7 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
   return (
     <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-[var(--border)] bg-slate-50/90 text-[var(--fg-muted)]">
+        <thead className="border-b border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--fg-muted)]">
           <tr>
             {headers.map((h) => (
               <th key={h} className="px-3 py-2.5 text-xs font-semibold tracking-wide uppercase">
@@ -139,7 +141,7 @@ export function Badge({
   tone?: "neutral" | "success" | "warning" | "danger" | "info" | "accent";
 }) {
   const tones: Record<string, string> = {
-    neutral: "bg-slate-100 text-slate-700",
+    neutral: "bg-[var(--surface-elevated)] text-[var(--fg-muted)]",
     success: "bg-[var(--success-muted)] text-[var(--success)]",
     warning: "bg-[var(--warning-muted)] text-[var(--warning)]",
     danger: "bg-[var(--danger-muted)] text-[var(--danger)]",
@@ -201,7 +203,7 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded-[var(--radius-sm)] bg-slate-200/80 ${className}`}
+      className={`animate-pulse rounded-[var(--radius-sm)] bg-[var(--surface-elevated)] ${className}`}
       aria-hidden
     />
   );
@@ -217,10 +219,10 @@ export function Alert({
   className?: string;
 }) {
   const tones: Record<string, string> = {
-    danger: "border-red-200 bg-[var(--danger-muted)] text-[var(--danger)]",
-    success: "border-emerald-200 bg-[var(--success-muted)] text-[var(--success)]",
-    info: "border-sky-200 bg-[var(--info-muted)] text-[var(--info)]",
-    warning: "border-amber-200 bg-[var(--warning-muted)] text-[var(--warning)]",
+    danger: "border-[var(--danger)]/30 bg-[var(--danger-muted)] text-[var(--danger)]",
+    success: "border-[var(--success)]/30 bg-[var(--success-muted)] text-[var(--success)]",
+    info: "border-[var(--info)]/30 bg-[var(--info-muted)] text-[var(--info)]",
+    warning: "border-[var(--warning)]/30 bg-[var(--warning-muted)] text-[var(--warning)]",
   };
   return (
     <div
@@ -277,6 +279,72 @@ export function FileButton({
       <span className="min-w-0 truncate text-sm text-[var(--fg-muted)]">
         {fileName ?? "No file chosen"}
       </span>
+    </div>
+  );
+}
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  wide = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  wide?: boolean;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+        aria-label="Close dialog"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className={`page-enter metal-edge relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-glow)] sm:rounded-[var(--radius)] ${
+          wide ? "sm:max-w-3xl" : "sm:max-w-xl"
+        }`}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-5">
+          <h2 id="modal-title" className="text-lg font-semibold text-[var(--fg)]">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-9 items-center justify-center rounded-full text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--fg)]"
+            aria-label="Close"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+      </div>
     </div>
   );
 }
