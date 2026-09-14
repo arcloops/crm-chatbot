@@ -66,6 +66,8 @@ Local Docker volumes (`postgres_data`) are **not** a backup strategy — they on
 
 ## Staging WABA cutover checklist
 
+Full procedure (credentials + Meta adapter + webhook + templates): see **[CLAUDE_AND_WHATSAPP_LIVE.md](./CLAUDE_AND_WHATSAPP_LIVE.md)**.
+
 1. Create staging WhatsApp Business Account / sandbox number.
 2. Set `WHATSAPP_*` env on staging; `whatsappMode=LIVE`.
 3. Verify webhook challenge `GET /webhooks/whatsapp`.

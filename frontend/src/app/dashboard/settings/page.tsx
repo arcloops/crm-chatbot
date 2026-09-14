@@ -179,7 +179,7 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setSettings({ ...settings, bspDisplayName: e.target.value })
               }
-              placeholder="Mock BSP / Twilio"
+              placeholder="Meta Cloud API"
             />
           </Field>
           <Field label="Integration webhook URL (reserved)">

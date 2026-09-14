@@ -205,7 +205,7 @@
 
 | Priority | Feature | Notes |
 |---|---|---|
-| P0 | BSP connector abstraction | Swap 360dialog / Gupshup / Twilio / etc. |
+| P0 | WhatsApp provider abstraction | MOCK + Meta Cloud API (`MetaWhatsApp`) |
 | P0 | Webhook endpoint | Inbound messages + delivery receipts |
 | P0 | Outbound send API | Text, template, media, interactive |
 | P0 | Template sync / catalog | Meta-approved templates |

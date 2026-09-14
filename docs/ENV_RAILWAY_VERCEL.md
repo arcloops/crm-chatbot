@@ -36,12 +36,14 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_ENDPOINT=
 S3_PUBLIC_URL=
-WHATSAPP_BSP=
-WHATSAPP_API_KEY=
-WHATSAPP_API_SECRET=
+WHATSAPP_BSP=meta
+WHATSAPP_API_KEY=                 # Meta system user token
+WHATSAPP_API_SECRET=              # unused for Meta
 WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=
 ```
+
+Claude + Live WhatsApp (Meta Cloud API only — no Twilio): **[CLAUDE_AND_WHATSAPP_LIVE.md](./CLAUDE_AND_WHATSAPP_LIVE.md)**.
 
 ### After saving vars on Railway
 

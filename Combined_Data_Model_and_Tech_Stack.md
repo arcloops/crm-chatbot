@@ -281,11 +281,11 @@ Any list ──(opts out)──▶ moves to Suppression List, removed from activ
 
 | Layer | Recommendation | Why |
 |---|---|---|
-| **Backend** | Node.js + TypeScript (Express or Fastify) | Best-documented SDKs for WhatsApp BSPs (360dialog, Gupshup, Twilio) and the Anthropic API both have mature TypeScript support, reducing integration friction |
+| **Backend** | Node.js + TypeScript (Fastify) | Anthropic API + Meta WhatsApp Cloud API have mature HTTP/TS support |
 | **Database** | PostgreSQL (+ pgvector extension if semantic search is needed later) | Structured relational data (listings, contacts, campaigns) fits naturally; JSON columns handle flexible fields like amenities/tags without a second database; pgvector adds AI-powered matching later without new infrastructure |
 | **AI / Conversational Layer** | Claude API, using tool use / function calling | Lets Claude query the live listings database directly instead of having data pasted into every prompt — keeps answers accurate as the portfolio changes, matching the brief's "not fine-tuned on static data" requirement |
 | **Campaign Queue** | Redis + BullMQ (Node) or Celery + Redis (Python alt.) | Campaign sending must respect WhatsApp rate limits and messaging tiers; a proper job queue handles retries, throttling, and scheduling reliably instead of custom-built logic |
-| **WhatsApp Access** | BSP of choice — 360dialog, Gupshup, Twilio, Bird, Interakt, or WATI | Required by Meta — cannot access the Cloud API directly without an approved BSP |
+| **WhatsApp Access** | Meta WhatsApp Cloud API (direct) | This project uses Graph API with Phone Number ID + system user token; no Twilio |
 | **Admin Dashboard (Frontend)** | React + Next.js | Most BSP dashboard examples and UI component libraries assume React; Next.js allows frontend + lightweight backend routes in one framework; libraries like Tremor/Recharts speed up analytics views |
 | **Hosting / Infrastructure** | Railway or Render (simple projects) / AWS (if scaling is expected) | Keeps operations simple early on; webhook endpoints (from Meta/BSP) need reliable uptime without cold-start delays |
 | **File/Image Storage** | Cloud object storage (e.g. AWS S3 or Cloudinary) | Listing photos and campaign carousel images need reliable, fast-loading external hosting rather than storing binary files in the database |

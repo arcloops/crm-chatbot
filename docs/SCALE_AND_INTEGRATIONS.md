@@ -10,7 +10,7 @@ This document describes the current Arcloops CRM architecture (Phases 0–13) an
 | Web      | Next.js App Router (`frontend/`)                          |
 | Database | PostgreSQL via Prisma                                     |
 | Queue    | Redis + BullMQ (campaign sends)                           |
-| WhatsApp | `WhatsAppProvider` with `MockWhatsApp` (LIVE Twilio stub) |
+| WhatsApp | `WhatsAppProvider` with `MockWhatsApp` + LIVE `MetaWhatsApp` (Cloud API) |
 | AI       | `MockAgent` / Claude when `ANTHROPIC_API_KEY` is set      |
 | Auth     | JWT staff roles + permission matrix                       |
 

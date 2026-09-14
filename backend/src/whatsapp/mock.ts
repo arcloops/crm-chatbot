@@ -130,29 +130,3 @@ export class MockWhatsApp implements WhatsAppProvider {
     return [];
   }
 }
-
-export class TwilioWhatsAppStub implements WhatsAppProvider {
-  readonly name = "twilio";
-
-  private notConfigured(): never {
-    throw new Error(
-      "Twilio WhatsApp is not configured. Set WHATSAPP_* credentials and whatsappMode=LIVE.",
-    );
-  }
-
-  async sendText(): Promise<SendResult> {
-    this.notConfigured();
-  }
-  async sendTemplate(): Promise<SendResult> {
-    this.notConfigured();
-  }
-  async sendMedia(): Promise<SendResult> {
-    this.notConfigured();
-  }
-  verifyWebhook() {
-    return { ok: false };
-  }
-  parseWebhook(): InboundEvent[] {
-    this.notConfigured();
-  }
-}
