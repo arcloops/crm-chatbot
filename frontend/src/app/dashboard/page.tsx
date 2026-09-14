@@ -121,7 +121,7 @@ export default function DashboardHomePage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed"));
   }, []);
 
-  const teamData = stats
+  const teamData: Record<string, number> = stats
     ? {
         "Active staff": stats.staffActive,
         "Active brokers": stats.brokersActive,
