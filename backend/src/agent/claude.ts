@@ -1,12 +1,16 @@
 import { env } from "../lib/env.js";
 import { MockAgent } from "./mock.js";
 import { extractProspectFields, searchListings } from "./tools.js";
-import type { AgentProvider, AgentReply } from "./types.js";
+import type { AgentMessage, AgentProvider, AgentReply } from "./types.js";
 
 export class ClaudeAgent implements AgentProvider {
   readonly name = "claude";
 
-  async reply(input: { phoneE164: string; userText: string }): Promise<AgentReply> {
+  async reply(input: {
+    phoneE164: string;
+    userText: string;
+    history?: AgentMessage[];
+  }): Promise<AgentReply> {
     const apiKey = env().ANTHROPIC_API_KEY;
     if (!apiKey) {
       return new MockAgent().reply(input);
@@ -21,6 +25,22 @@ export class ClaudeAgent implements AgentProvider {
         intent: extracted.intent,
       });
 
+      const prior = (input.history ?? [])
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .slice(-20)
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        }));
+
+      const messages = [
+        ...prior,
+        {
+          role: "user" as const,
+          content: `Prospect message: ${input.userText}\n\nInventory:\n${JSON.stringify(listings)}\n\nRespond with a helpful WhatsApp message.`,
+        },
+      ];
+
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -33,12 +53,7 @@ export class ClaudeAgent implements AgentProvider {
           max_tokens: 512,
           system:
             "You are Arcloops property assistant. Only recommend listings from the provided inventory JSON. Never invent prices or addresses. If unsure, say so. Keep replies concise for WhatsApp.",
-          messages: [
-            {
-              role: "user",
-              content: `Prospect message: ${input.userText}\n\nInventory:\n${JSON.stringify(listings)}\n\nRespond with a helpful WhatsApp message.`,
-            },
-          ],
+          messages,
         }),
       });
 

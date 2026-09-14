@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/campaigns", label: "Campaigns", permission: "campaigns:read", group: "comms" },
   { href: "/dashboard/analytics", label: "Analytics", permission: "campaigns:read", group: "comms" },
   { href: "/dashboard/inbox", label: "Inbox", permission: "inbox:read", group: "comms" },
+  { href: "/dashboard/bot", label: "Bot playground", permission: "inbox:read", group: "comms" },
   { href: "/dashboard/whatsapp", label: "WhatsApp Lab", permission: "contacts:read", group: "comms" },
   { href: "/dashboard/settings", label: "Settings", adminOnly: true, group: "admin" },
   { href: "/dashboard/staff", label: "Staff", permission: "staff:read", adminOnly: true, group: "admin" },

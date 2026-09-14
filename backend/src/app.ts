@@ -7,6 +7,7 @@ import { env } from "./lib/env.js";
 import { getLogger } from "./lib/logger.js";
 import { initSentry, captureException } from "./lib/sentry.js";
 import { campaignsQueueEnabled, isVercelRuntime } from "./lib/runtime.js";
+import { agentRoutes } from "./routes/agent.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { authRoutes } from "./routes/auth.js";
 import { brokerRoutes } from "./routes/brokers.js";
@@ -83,6 +84,7 @@ export async function createApp() {
   await app.register(whatsappRoutes);
   await app.register(campaignRoutes);
   await app.register(inboxRoutes);
+  await app.register(agentRoutes);
   await app.register(privacyRoutes);
   await app.register(cronRoutes);
   await app.register(importRoutes);

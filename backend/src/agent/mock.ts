@@ -4,7 +4,11 @@ import type { AgentProvider, AgentReply } from "./types.js";
 export class MockAgent implements AgentProvider {
   readonly name = "mock";
 
-  async reply(input: { phoneE164: string; userText: string }): Promise<AgentReply> {
+  async reply(input: {
+    phoneE164: string;
+    userText: string;
+    history?: import("./types.js").AgentMessage[];
+  }): Promise<AgentReply> {
     const extracted = extractProspectFields(input.userText);
 
     if (extracted.wantsEscalate) {
