@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { Card, PageHeader } from "@/components/ui";
+import { Alert, Card, EmptyState, PageHeader, Spinner } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 
 type SearchResult = {
@@ -56,74 +56,97 @@ function SearchInner() {
           q ? `Results for “${q}”` : "Enter at least 2 characters in the top bar."
         }
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
       {!data ? (
-        <p className="text-sm text-zinc-600">Waiting for query…</p>
+        <EmptyState
+          title="Waiting for a query"
+          description="Use the top search bar (at least 2 characters)."
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
-            <h2 className="mb-2 font-medium">Listings ({data.listings.length})</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--fg)]">
+              Listings ({data.listings.length})
+            </h2>
             {data.listings.length === 0 ? (
-              <p className="text-sm text-zinc-500">No matches</p>
+              <EmptyState title="No matches" />
             ) : (
               <ul className="space-y-2 text-sm">
                 {data.listings.map((l) => (
                   <li key={l.id}>
-                    <Link className="underline" href={`/dashboard/listings/${l.id}`}>
+                    <Link
+                      className="text-[var(--accent)] underline-offset-2 hover:underline"
+                      href={`/dashboard/listings/${l.id}`}
+                    >
                       {l.listingCode} · {l.title}
                     </Link>
-                    <span className="text-zinc-500"> — {l.location}</span>
+                    <span className="text-[var(--fg-muted)]"> — {l.location}</span>
                   </li>
                 ))}
               </ul>
             )}
           </Card>
           <Card>
-            <h2 className="mb-2 font-medium">Brokers ({data.brokers.length})</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--fg)]">
+              Brokers ({data.brokers.length})
+            </h2>
             {data.brokers.length === 0 ? (
-              <p className="text-sm text-zinc-500">No matches</p>
+              <EmptyState title="No matches" />
             ) : (
               <ul className="space-y-2 text-sm">
                 {data.brokers.map((b) => (
                   <li key={b.id}>
-                    <Link className="underline" href="/dashboard/brokers">
+                    <Link
+                      className="text-[var(--accent)] underline-offset-2 hover:underline"
+                      href="/dashboard/brokers"
+                    >
                       {b.brokerCode} · {b.name}
                     </Link>
-                    <span className="text-zinc-500"> — {b.phoneE164}</span>
+                    <span className="text-[var(--fg-muted)]"> — {b.phoneE164}</span>
                   </li>
                 ))}
               </ul>
             )}
           </Card>
           <Card>
-            <h2 className="mb-2 font-medium">Customers ({data.customers.length})</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--fg)]">
+              Customers ({data.customers.length})
+            </h2>
             {data.customers.length === 0 ? (
-              <p className="text-sm text-zinc-500">No matches</p>
+              <EmptyState title="No matches" />
             ) : (
               <ul className="space-y-2 text-sm">
                 {data.customers.map((c) => (
                   <li key={c.id}>
-                    <Link className="underline" href="/dashboard/customers">
+                    <Link
+                      className="text-[var(--accent)] underline-offset-2 hover:underline"
+                      href="/dashboard/customers"
+                    >
                       {c.customerCode} · {c.name}
                     </Link>
-                    <span className="text-zinc-500"> — {c.phoneE164}</span>
+                    <span className="text-[var(--fg-muted)]"> — {c.phoneE164}</span>
                   </li>
                 ))}
               </ul>
             )}
           </Card>
           <Card>
-            <h2 className="mb-2 font-medium">Prospects ({data.prospects.length})</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--fg)]">
+              Prospects ({data.prospects.length})
+            </h2>
             {data.prospects.length === 0 ? (
-              <p className="text-sm text-zinc-500">No matches</p>
+              <EmptyState title="No matches" />
             ) : (
               <ul className="space-y-2 text-sm">
                 {data.prospects.map((p) => (
                   <li key={p.id}>
-                    <Link className="underline" href="/dashboard/prospects">
+                    <Link
+                      className="text-[var(--accent)] underline-offset-2 hover:underline"
+                      href="/dashboard/prospects"
+                    >
                       {p.prospectCode} · {p.name}
                     </Link>
-                    <span className="text-zinc-500">
+                    <span className="text-[var(--fg-muted)]">
                       {" "}
                       — {p.leadStage} · {p.phoneE164}
                     </span>
@@ -140,7 +163,7 @@ function SearchInner() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-600">Loading search…</p>}>
+    <Suspense fallback={<Spinner label="Loading search…" />}>
       <SearchInner />
     </Suspense>
   );

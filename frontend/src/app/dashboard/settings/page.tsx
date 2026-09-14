@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Button, Card, Field, Input, PageHeader, Select, Spinner } from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -113,7 +113,7 @@ export default function SettingsPage() {
   }
 
   if (!settings) {
-    return <p className="text-sm text-zinc-600">{error ?? "Loading…"}</p>;
+    return error ? <Alert tone="danger">{error}</Alert> : <Spinner />;
   }
 
   return (
@@ -122,8 +122,8 @@ export default function SettingsPage() {
         title="Settings"
         description="Currency, cold leads, WhatsApp mode, retention, and privacy tools."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {saved ? <p className="text-sm text-green-700">Saved.</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {saved ? <Alert tone="success">Saved.</Alert> : null}
 
       <Card>
         <form onSubmit={onSave} className="grid max-w-lg gap-3">
@@ -191,7 +191,7 @@ export default function SettingsPage() {
               placeholder="https://example.com/hooks/crm (unused until Phase 12+)"
             />
           </Field>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[var(--fg-faint)]">
             Compliance: inbound STOP/UNSUBSCRIBE auto-suppresses; START restores opt-in
             with consent timestamp.
           </p>
@@ -221,7 +221,9 @@ export default function SettingsPage() {
                 Run retention now
               </Button>
             </div>
-            {privacyMsg ? <p className="text-sm text-zinc-600">{privacyMsg}</p> : null}
+            {privacyMsg ? (
+              <p className="text-sm text-[var(--fg-muted)]">{privacyMsg}</p>
+            ) : null}
           </div>
         </Card>
       ) : null}

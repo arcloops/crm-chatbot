@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Table } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Developer = {
@@ -68,7 +77,7 @@ export default function DevelopersPage() {
         title="Developers"
         description="External developer partners and their pre-launch projects."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -115,20 +124,21 @@ export default function DevelopersPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">No developers yet.</p>
-        </Card>
+        <EmptyState title="No developers yet" description="Create a developer to get started." />
       ) : (
         <Table headers={["Code", "Name", "Company", "Phone", "Projects", ""]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100">
+            <tr key={row.id} className="table-row-hover">
               <td className="px-3 py-2">{row.developerCode}</td>
               <td className="px-3 py-2">{row.name}</td>
-              <td className="px-3 py-2">{row.companyName ?? "—"}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{row.companyName ?? "—"}</td>
               <td className="px-3 py-2">{row.phoneE164}</td>
               <td className="px-3 py-2">{row._count?.projects ?? 0}</td>
               <td className="px-3 py-2">
-                <Link className="underline" href={`/dashboard/developers/${row.id}`}>
+                <Link
+                  className="text-[var(--accent)] underline-offset-2 hover:underline"
+                  href={`/dashboard/developers/${row.id}`}
+                >
                   Open
                 </Link>
               </td>

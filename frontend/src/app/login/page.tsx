@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { Alert, Button, Field, Input, Spinner } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 
 export default function LoginPage() {
@@ -31,46 +32,70 @@ export default function LoginPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
+        <Spinner />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 20% 20%, #ccfbf1 0%, transparent 55%), radial-gradient(ellipse 70% 50% at 85% 75%, #e0f2fe 0%, transparent 50%), linear-gradient(165deg, #f1f5f9 0%, #e2e8f0 100%)",
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%230f766e' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+        }}
+        aria-hidden
+      />
+
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm"
+        className="relative w-full max-w-md space-y-5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]/95 p-8 shadow-[var(--shadow-md)] backdrop-blur-sm"
       >
         <div>
-          <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-            Arcloops CRM
+          <p className="font-display text-3xl font-semibold tracking-tight text-[var(--fg)]">
+            Arcloops
           </p>
-          <h1 className="mt-1 text-2xl font-semibold">Sign in</h1>
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">WhatsApp property CRM</p>
+          <h1 className="mt-5 text-lg font-semibold text-[var(--fg)]">Sign in</h1>
         </div>
-        <label className="block space-y-1 text-sm">
-          <span>Email</span>
-          <input
-            className="w-full rounded-md border border-zinc-300 px-3 py-2"
+
+        <Field label="Email">
+          <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            autoComplete="username"
             required
           />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span>Password</span>
-          <input
-            className="w-full rounded-md border border-zinc-300 px-3 py-2"
+        </Field>
+
+        <Field label="Password">
+          <Input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
+            autoComplete="current-password"
             required
           />
-        </label>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
-        >
+        </Field>
+
+        {error ? <Alert>{error}</Alert> : null}
+
+        <Button type="submit" disabled={submitting} className="w-full py-2.5">
           {submitting ? "Signing in…" : "Sign in"}
-        </button>
+        </Button>
       </form>
     </div>
   );

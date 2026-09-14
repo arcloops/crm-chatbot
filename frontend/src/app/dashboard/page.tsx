@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Card, PageHeader } from "@/components/ui";
+import { Alert, Badge, Card, PageHeader, Spinner, statusTone } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 
 type Stats = {
@@ -15,6 +15,15 @@ type Stats = {
   campaignsTotal: number;
   campaignsByStatus: Record<string, number>;
 };
+
+function StatRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <li className="flex items-center justify-between gap-3 py-1">
+      <span className="text-[var(--fg-muted)]">{label}</span>
+      <span className="font-semibold tabular-nums text-[var(--accent)]">{value}</span>
+    </li>
+  );
+}
 
 export default function DashboardHomePage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -32,66 +41,65 @@ export default function DashboardHomePage() {
         title="Overview"
         description="Live counts across listings, prospects, campaigns, and staff."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
       {!stats ? (
-        <p className="text-sm text-zinc-600">Loading stats…</p>
+        <Spinner label="Loading stats…" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
-            <h2 className="mb-3 font-medium">Listings by status</h2>
-            <ul className="space-y-1 text-sm">
+            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--fg)] uppercase">
+              Listings by status
+            </h2>
+            <ul className="divide-y divide-[var(--border-subtle)] text-sm">
               {Object.entries(stats.listingsByStatus).map(([k, v]) => (
-                <li key={k} className="flex justify-between">
-                  <span>{k}</span>
-                  <span className="font-medium">{v}</span>
+                <li key={k} className="flex items-center justify-between gap-3 py-1.5">
+                  <Badge tone={statusTone(k)}>{k}</Badge>
+                  <span className="font-semibold tabular-nums text-[var(--accent)]">{v}</span>
                 </li>
               ))}
             </ul>
           </Card>
           <Card>
-            <h2 className="mb-3 font-medium">Prospects by stage</h2>
-            <ul className="space-y-1 text-sm">
+            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--fg)] uppercase">
+              Prospects by stage
+            </h2>
+            <ul className="divide-y divide-[var(--border-subtle)] text-sm">
               {Object.entries(stats.prospectsByStage).map(([k, v]) => (
-                <li key={k} className="flex justify-between">
-                  <span>{k}</span>
-                  <span className="font-medium">{v}</span>
+                <li key={k} className="flex items-center justify-between gap-3 py-1.5">
+                  <Badge tone={statusTone(k)}>{k}</Badge>
+                  <span className="font-semibold tabular-nums text-[var(--accent)]">{v}</span>
                 </li>
               ))}
             </ul>
           </Card>
           <Card>
-            <h2 className="mb-3 font-medium">Team & contacts</h2>
-            <ul className="space-y-1 text-sm">
-              <li className="flex justify-between">
-                <span>Active staff</span>
-                <span className="font-medium">{stats.staffActive}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Active brokers</span>
-                <span className="font-medium">{stats.brokersActive}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Customers</span>
-                <span className="font-medium">{stats.customersCount}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Suppression</span>
-                <span className="font-medium">{stats.suppressionCount}</span>
-              </li>
+            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--fg)] uppercase">
+              Team & contacts
+            </h2>
+            <ul className="text-sm">
+              <StatRow label="Active staff" value={stats.staffActive} />
+              <StatRow label="Active brokers" value={stats.brokersActive} />
+              <StatRow label="Customers" value={stats.customersCount} />
+              <StatRow label="Suppression" value={stats.suppressionCount} />
             </ul>
           </Card>
           <Card>
-            <h2 className="mb-3 font-medium">Campaigns</h2>
+            <h2 className="mb-3 text-sm font-semibold tracking-wide text-[var(--fg)] uppercase">
+              Campaigns
+            </h2>
             <p className="mb-2 text-sm">
-              <Link className="underline" href="/dashboard/campaigns">
+              <Link
+                className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline"
+                href="/dashboard/campaigns"
+              >
                 {stats.campaignsTotal} total
               </Link>
             </p>
-            <ul className="space-y-1 text-sm">
+            <ul className="divide-y divide-[var(--border-subtle)] text-sm">
               {Object.entries(stats.campaignsByStatus ?? {}).map(([k, v]) => (
-                <li key={k} className="flex justify-between">
-                  <span>{k}</span>
-                  <span className="font-medium">{v}</span>
+                <li key={k} className="flex items-center justify-between gap-3 py-1.5">
+                  <Badge tone={statusTone(k)}>{k}</Badge>
+                  <span className="font-semibold tabular-nums text-[var(--accent)]">{v}</span>
                 </li>
               ))}
             </ul>

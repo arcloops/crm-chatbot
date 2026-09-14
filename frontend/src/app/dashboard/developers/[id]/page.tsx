@@ -4,7 +4,20 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Spinner,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Project = {
@@ -106,7 +119,7 @@ export default function DeveloperDetailPage() {
   }
 
   if (!developer) {
-    return <p className="text-sm text-zinc-600">{error ?? "Loading…"}</p>;
+    return error ? <Alert tone="danger">{error}</Alert> : <Spinner />;
   }
 
   return (
@@ -115,12 +128,15 @@ export default function DeveloperDetailPage() {
         title={developer.name}
         description={`${developer.developerCode} · ${developer.companyName ?? "—"} · ${developer.phoneE164}`}
         actions={
-          <Link href="/dashboard/developers" className="text-sm underline">
+          <Link
+            href="/dashboard/developers"
+            className="text-sm text-[var(--accent)] underline-offset-2 hover:underline"
+          >
             Back
           </Link>
         }
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -163,15 +179,17 @@ export default function DeveloperDetailPage() {
       <Card>
         <h2 className="mb-3 font-medium">Projects</h2>
         {developer.projects.length === 0 ? (
-          <p className="text-sm text-zinc-500">No projects yet.</p>
+          <EmptyState title="No projects yet" description="Add a project to get started." />
         ) : (
           <Table headers={["Code", "Name", "Location", "Status", "Listings", ""]}>
             {developer.projects.map((p) => (
-              <tr key={p.id} className="border-t border-zinc-100">
+              <tr key={p.id} className="table-row-hover">
                 <td className="px-3 py-2">{p.projectCode}</td>
                 <td className="px-3 py-2">{p.name}</td>
-                <td className="px-3 py-2">{p.location}</td>
-                <td className="px-3 py-2">{p.status}</td>
+                <td className="px-3 py-2 text-[var(--fg-muted)]">{p.location}</td>
+                <td className="px-3 py-2">
+                  <Badge tone={statusTone(p.status)}>{p.status}</Badge>
+                </td>
                 <td className="px-3 py-2">{p._count?.listings ?? 0}</td>
                 <td className="px-3 py-2">
                   <Button variant="secondary" onClick={() => void openProject(p.id)}>
@@ -222,10 +240,13 @@ export default function DeveloperDetailPage() {
           </form>
           <Table headers={["Code", "Title", "Price"]}>
             {selectedProject.listings.map((l) => (
-              <tr key={l.id} className="border-t border-zinc-100">
+              <tr key={l.id} className="table-row-hover">
                 <td className="px-3 py-2">{l.listingCode}</td>
                 <td className="px-3 py-2">
-                  <Link className="underline" href={`/dashboard/listings/${l.id}`}>
+                  <Link
+                    className="text-[var(--accent)] underline-offset-2 hover:underline"
+                    href={`/dashboard/listings/${l.id}`}
+                  >
                     {l.title}
                   </Link>
                 </td>

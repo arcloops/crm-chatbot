@@ -3,7 +3,19 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Campaign = {
@@ -97,7 +109,7 @@ export default function CampaignsPage() {
         title="Campaigns"
         description="Segmented WhatsApp broadcasts with suppression and opt-in gates."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -183,27 +195,33 @@ export default function CampaignsPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">No campaigns yet.</p>
-        </Card>
+        <EmptyState
+          title="No campaigns yet"
+          description="Create a draft campaign to get started."
+        />
       ) : (
         <Table headers={["Name", "Status", "Audience", "Template", "Sent", ""]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100">
+            <tr key={row.id} className="table-row-hover">
               <td className="px-3 py-2">
-                <Link className="underline" href={`/dashboard/campaigns/${row.id}`}>
+                <Link
+                  className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+                  href={`/dashboard/campaigns/${row.id}`}
+                >
                   {row.name}
                 </Link>
               </td>
-              <td className="px-3 py-2">{row.status}</td>
-              <td className="px-3 py-2">{row.audienceType}</td>
-              <td className="px-3 py-2">{row.templateName}</td>
               <td className="px-3 py-2">
+                <Badge tone={statusTone(row.status)}>{row.status}</Badge>
+              </td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{row.audienceType}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{row.templateName}</td>
+              <td className="px-3 py-2 tabular-nums">
                 {row.sentCount}/{row.totalRecipients}
               </td>
               <td className="px-3 py-2">
                 <Link
-                  className="text-sm underline"
+                  className="text-sm text-[var(--accent)] underline-offset-2 hover:underline"
                   href={`/dashboard/campaigns/${row.id}`}
                 >
                   Open

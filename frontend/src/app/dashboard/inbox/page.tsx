@@ -2,7 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, PageHeader, Select, TextArea } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  PageHeader,
+  Select,
+  TextArea,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Conversation = {
@@ -112,7 +121,7 @@ export default function InboxPage() {
         title="Inbox"
         description="Support threads, human takeover, and agent replies."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -123,46 +132,46 @@ export default function InboxPage() {
               <option value="takeover">Takeover</option>
             </Select>
           </Field>
-          <ul className="mt-3 max-h-[32rem] space-y-2 overflow-y-auto text-sm">
-            {rows.length === 0 ? (
-              <li className="text-zinc-500">No conversations.</li>
-            ) : (
-              rows.map((c) => (
+          {rows.length === 0 ? (
+            <EmptyState title="No conversations" />
+          ) : (
+            <ul className="mt-3 max-h-[32rem] space-y-2 overflow-y-auto text-sm">
+              {rows.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
-                    className={`w-full rounded-md px-2 py-2 text-left hover:bg-zinc-100 ${
-                      selectedId === c.id ? "bg-zinc-100 font-medium" : ""
+                    className={`w-full rounded-md px-2 py-2 text-left hover:bg-slate-100 ${
+                      selectedId === c.id ? "bg-slate-100 font-medium" : ""
                     }`}
                     onClick={() => void loadThread(c.id)}
                   >
                     <div>{c.phoneE164}</div>
-                    <div className="text-xs text-zinc-500">
+                    <div className="text-xs text-[var(--fg-faint)]">
                       {c.prospect?.name ?? "Unknown"} · {c._count?.messages ?? 0} msgs
                       {c.humanTakeover ? " · takeover" : ""}
                       {c.escalatedAt ? " · escalated" : ""}
                     </div>
                   </button>
                 </li>
-              ))
-            )}
-          </ul>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card>
           <h2 className="mb-3 font-medium">Thread</h2>
           {!conversation ? (
-            <p className="text-sm text-zinc-500">Select a conversation.</p>
+            <p className="text-sm text-[var(--fg-muted)]">Select a conversation.</p>
           ) : (
             <>
-              <p className="mb-2 text-sm text-zinc-600">
+              <p className="mb-2 text-sm text-[var(--fg-muted)]">
                 {conversation.prospect?.prospectCode} · {conversation.prospect?.leadStage}
                 {conversation.prospect?.assignedBroker
                   ? ` · Broker: ${conversation.prospect.assignedBroker.name}`
                   : ""}
               </p>
               {conversation.escalationSummary ? (
-                <p className="mb-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                <p className="mb-2 rounded-md bg-[var(--warning-muted)] px-2 py-1 text-xs text-[var(--warning)]">
                   {conversation.escalationSummary}
                 </p>
               ) : null}
@@ -171,10 +180,10 @@ export default function InboxPage() {
                   <li
                     key={m.id}
                     className={`rounded-md px-2 py-1 ${
-                      m.direction === "OUT" ? "bg-zinc-100" : "bg-emerald-50"
+                      m.direction === "OUT" ? "bg-slate-100" : "bg-[var(--success-muted)]"
                     }`}
                   >
-                    <div className="text-xs text-zinc-500">
+                    <div className="text-xs text-[var(--fg-faint)]">
                       {m.direction} · {m.status}
                     </div>
                     <div className="whitespace-pre-wrap">{m.body ?? "—"}</div>
@@ -201,7 +210,9 @@ export default function InboxPage() {
                 </Button>
               </div>
               {suggestion ? (
-                <p className="text-xs text-zinc-500">Suggestion loaded into reply box.</p>
+                <p className="text-xs text-[var(--fg-faint)]">
+                  Suggestion loaded into reply box.
+                </p>
               ) : null}
               <form onSubmit={onReply} className="space-y-2">
                 <Field label="Reply">
@@ -216,7 +227,7 @@ export default function InboxPage() {
               </form>
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[var(--fg-muted)]">
               {canWrite ? "Select a thread." : "Write permission required."}
             </p>
           )}

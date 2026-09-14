@@ -2,7 +2,17 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Overview = {
@@ -118,7 +128,9 @@ export default function AnalyticsPage() {
   }, [canCampaigns]);
 
   if (!canCampaigns) {
-    return <p className="text-sm text-zinc-600">Analytics requires campaigns:read.</p>;
+    return (
+      <p className="text-sm text-[var(--fg-muted)]">Analytics requires campaigns:read.</p>
+    );
   }
 
   return (
@@ -128,14 +140,14 @@ export default function AnalyticsPage() {
         description="Campaign, funnel, inventory, and inbox metrics for the selected range."
         actions={
           <span
-            className="cursor-help rounded-full border border-zinc-300 px-2 text-xs text-zinc-500"
+            className="cursor-help rounded-full border border-[var(--border)] px-2 text-xs text-[var(--fg-faint)]"
             title="Use the date range to answer “what worked this week?”. Campaign tables show send/delivery/reply. Funnel shows stage conversion rates."
           >
             ?
           </span>
         }
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <Card>
         <form onSubmit={load} className="flex flex-wrap items-end gap-3">
@@ -162,7 +174,7 @@ export default function AnalyticsPage() {
             ["Conversions", overview.conversions],
           ].map(([label, value]) => (
             <Card key={String(label)}>
-              <p className="text-xs uppercase text-zinc-500">{label}</p>
+              <p className="text-xs uppercase text-[var(--fg-faint)]">{label}</p>
               <p className="text-2xl font-semibold">{value}</p>
             </Card>
           ))}
@@ -172,7 +184,7 @@ export default function AnalyticsPage() {
       <Card>
         <h2 className="mb-3 font-medium">Campaign performance</h2>
         {campaigns.length === 0 ? (
-          <p className="text-sm text-zinc-500">No campaigns.</p>
+          <p className="text-sm text-[var(--fg-muted)]">No campaigns.</p>
         ) : (
           <Table
             headers={[
@@ -187,15 +199,17 @@ export default function AnalyticsPage() {
             ]}
           >
             {campaigns.map((c) => (
-              <tr key={c.id} className="border-t border-zinc-100">
+              <tr key={c.id} className="table-row-hover">
                 <td className="px-3 py-2">{c.name}</td>
-                <td className="px-3 py-2">{c.status}</td>
-                <td className="px-3 py-2">{c.sentCount}</td>
-                <td className="px-3 py-2">{c.deliveredCount}</td>
-                <td className="px-3 py-2">{c.readCount}</td>
-                <td className="px-3 py-2">{c.failedCount}</td>
-                <td className="px-3 py-2">{c.skippedCount}</td>
-                <td className="px-3 py-2">{c.repliedCount}</td>
+                <td className="px-3 py-2">
+                  <Badge tone={statusTone(c.status)}>{c.status}</Badge>
+                </td>
+                <td className="px-3 py-2 tabular-nums">{c.sentCount}</td>
+                <td className="px-3 py-2 tabular-nums">{c.deliveredCount}</td>
+                <td className="px-3 py-2 tabular-nums">{c.readCount}</td>
+                <td className="px-3 py-2 tabular-nums">{c.failedCount}</td>
+                <td className="px-3 py-2 tabular-nums">{c.skippedCount}</td>
+                <td className="px-3 py-2 tabular-nums">{c.repliedCount}</td>
               </tr>
             ))}
           </Table>
@@ -207,16 +221,16 @@ export default function AnalyticsPage() {
           <h2 className="mb-3 font-medium">Prospect funnel</h2>
           <Table headers={["Stage", "Count", "Share of prior stage %"]}>
             {funnel.map((row) => (
-              <tr key={row.stage} className="border-t border-zinc-100">
+              <tr key={row.stage} className="table-row-hover">
                 <td className="px-3 py-2">{row.stage}</td>
-                <td className="px-3 py-2">{row.count}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2 tabular-nums">{row.count}</td>
+                <td className="px-3 py-2 tabular-nums">
                   {row.conversionFromPrior == null ? "—" : `${row.conversionFromPrior}%`}
                 </td>
               </tr>
             ))}
           </Table>
-          <p className="mt-2 text-xs text-zinc-500">
+          <p className="mt-2 text-xs text-[var(--fg-faint)]">
             Share of prior stage is a snapshot ratio of current counts, not cohort conversion.
           </p>
         </Card>
@@ -224,13 +238,13 @@ export default function AnalyticsPage() {
         <Card>
           <h2 className="mb-3 font-medium">Lead source attribution</h2>
           {attribution.length === 0 ? (
-            <p className="text-sm text-zinc-500">No prospects in range.</p>
+            <p className="text-sm text-[var(--fg-muted)]">No prospects in range.</p>
           ) : (
             <Table headers={["Source", "Count"]}>
               {attribution.map((row) => (
-                <tr key={row.leadSource} className="border-t border-zinc-100">
+                <tr key={row.leadSource} className="table-row-hover">
                   <td className="px-3 py-2">{row.leadSource}</td>
-                  <td className="px-3 py-2">{row.count}</td>
+                  <td className="px-3 py-2 tabular-nums">{row.count}</td>
                 </tr>
               ))}
             </Table>
@@ -244,9 +258,11 @@ export default function AnalyticsPage() {
             <h2 className="mb-3 font-medium">Inventory by status</h2>
             <Table headers={["Status", "Count"]}>
               {inventory.byStatus.map((r) => (
-                <tr key={r.status} className="border-t border-zinc-100">
-                  <td className="px-3 py-2">{r.status}</td>
-                  <td className="px-3 py-2">{r.count}</td>
+                <tr key={r.status} className="table-row-hover">
+                  <td className="px-3 py-2">
+                    <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+                  </td>
+                  <td className="px-3 py-2 tabular-nums">{r.count}</td>
                 </tr>
               ))}
             </Table>
@@ -255,9 +271,9 @@ export default function AnalyticsPage() {
             <h2 className="mb-3 font-medium">By category</h2>
             <Table headers={["Category", "Count"]}>
               {inventory.byCategory.map((r) => (
-                <tr key={r.category} className="border-t border-zinc-100">
+                <tr key={r.category} className="table-row-hover">
                   <td className="px-3 py-2">{r.category}</td>
-                  <td className="px-3 py-2">{r.count}</td>
+                  <td className="px-3 py-2 tabular-nums">{r.count}</td>
                 </tr>
               ))}
             </Table>
@@ -266,9 +282,9 @@ export default function AnalyticsPage() {
             <h2 className="mb-3 font-medium">By broker</h2>
             <Table headers={["Broker", "Count"]}>
               {inventory.byBroker.map((r) => (
-                <tr key={r.brokerName} className="border-t border-zinc-100">
+                <tr key={r.brokerName} className="table-row-hover">
                   <td className="px-3 py-2">{r.brokerName}</td>
-                  <td className="px-3 py-2">{r.count}</td>
+                  <td className="px-3 py-2 tabular-nums">{r.count}</td>
                 </tr>
               ))}
             </Table>
@@ -280,13 +296,13 @@ export default function AnalyticsPage() {
         <h2 className="mb-3 font-medium">Broker leaderboard</h2>
         <Table headers={["Broker", "Open prospects", "Conversions", "Active listings"]}>
           {leaderboard.map((b) => (
-            <tr key={b.brokerCode} className="border-t border-zinc-100">
+            <tr key={b.brokerCode} className="table-row-hover">
               <td className="px-3 py-2">
                 {b.name} ({b.brokerCode})
               </td>
-              <td className="px-3 py-2">{b.openProspects}</td>
-              <td className="px-3 py-2">{b.conversionsInRange}</td>
-              <td className="px-3 py-2">{b.activeListings}</td>
+              <td className="px-3 py-2 tabular-nums">{b.openProspects}</td>
+              <td className="px-3 py-2 tabular-nums">{b.conversionsInRange}</td>
+              <td className="px-3 py-2 tabular-nums">{b.activeListings}</td>
             </tr>
           ))}
         </Table>
@@ -297,23 +313,23 @@ export default function AnalyticsPage() {
           <h2 className="mb-3 font-medium">Inbox metrics</h2>
           <ul className="space-y-1 text-sm">
             <li className="flex justify-between">
-              <span>Conversations</span>
+              <span className="text-[var(--fg-muted)]">Conversations</span>
               <span className="font-medium">{inbox.totalConversations}</span>
             </li>
             <li className="flex justify-between">
-              <span>Escalated</span>
+              <span className="text-[var(--fg-muted)]">Escalated</span>
               <span className="font-medium">{inbox.escalated}</span>
             </li>
             <li className="flex justify-between">
-              <span>Human takeover</span>
+              <span className="text-[var(--fg-muted)]">Human takeover</span>
               <span className="font-medium">{inbox.takeover}</span>
             </li>
             <li className="flex justify-between">
-              <span>Bot deflection rate</span>
+              <span className="text-[var(--fg-muted)]">Bot deflection rate</span>
               <span className="font-medium">{inbox.deflectionRate}%</span>
             </li>
             <li className="flex justify-between">
-              <span>Avg escalation response (min)</span>
+              <span className="text-[var(--fg-muted)]">Avg escalation response (min)</span>
               <span className="font-medium">
                 {inbox.avgEscalationResponseMinutes ?? "—"}
               </span>

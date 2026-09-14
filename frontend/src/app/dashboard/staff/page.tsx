@@ -2,7 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Staff = {
@@ -64,7 +76,7 @@ export default function StaffPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Staff" description="Internal dashboard users and roles." />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -113,25 +125,31 @@ export default function StaffPage() {
         </Card>
       ) : null}
 
-      <Table headers={["Name", "Email", "Role", "Status", "Actions"]}>
-        {rows.map((row) => (
-          <tr key={row.id} className="border-t border-zinc-100">
-            <td className="px-3 py-2">{row.name}</td>
-            <td className="px-3 py-2">{row.email}</td>
-            <td className="px-3 py-2">{row.role}</td>
-            <td className="px-3 py-2">{row.activeStatus}</td>
-            <td className="px-3 py-2">
-              {canWrite ? (
-                <Button variant="secondary" onClick={() => void toggleActive(row)}>
-                  {row.activeStatus === "ACTIVE" ? "Deactivate" : "Activate"}
-                </Button>
-              ) : (
-                "—"
-              )}
-            </td>
-          </tr>
-        ))}
-      </Table>
+      {rows.length === 0 ? (
+        <EmptyState title="No staff yet" description="Create a staff member to get started." />
+      ) : (
+        <Table headers={["Name", "Email", "Role", "Status", "Actions"]}>
+          {rows.map((row) => (
+            <tr key={row.id} className="table-row-hover">
+              <td className="px-3 py-2">{row.name}</td>
+              <td className="px-3 py-2">{row.email}</td>
+              <td className="px-3 py-2">{row.role}</td>
+              <td className="px-3 py-2">
+                <Badge tone={statusTone(row.activeStatus)}>{row.activeStatus}</Badge>
+              </td>
+              <td className="px-3 py-2">
+                {canWrite ? (
+                  <Button variant="secondary" onClick={() => void toggleActive(row)}>
+                    {row.activeStatus === "ACTIVE" ? "Deactivate" : "Activate"}
+                  </Button>
+                ) : (
+                  "—"
+                )}
+              </td>
+            </tr>
+          ))}
+        </Table>
+      )}
     </div>
   );
 }

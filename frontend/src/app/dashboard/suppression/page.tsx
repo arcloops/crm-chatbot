@@ -2,7 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Table } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Entry = {
@@ -18,7 +27,10 @@ export default function SuppressionPage() {
   const [rows, setRows] = useState<Entry[]>([]);
   const [phone, setPhone] = useState("");
   const [checkPhone, setCheckPhone] = useState("");
-  const [checkResult, setCheckResult] = useState<string | null>(null);
+  const [checkResult, setCheckResult] = useState<{
+    allowed: boolean;
+    message: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -78,9 +90,12 @@ export default function SuppressionPage() {
         body: JSON.stringify({ phone: checkPhone }),
       },
     );
-    setCheckResult(
-      res.allowed ? "Allowed — not suppressed" : `Blocked — ${res.error ?? "suppressed"}`,
-    );
+    setCheckResult({
+      allowed: res.allowed,
+      message: res.allowed
+        ? "Allowed — not suppressed"
+        : `Blocked — ${res.error ?? "suppressed"}`,
+    });
   }
 
   return (
@@ -89,11 +104,11 @@ export default function SuppressionPage() {
         title="Suppression"
         description="Opt-out list. Campaign sends and WhatsApp outbound check this gate. Inbound STOP/UNSUBSCRIBE also cascades here automatically."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
-          <h2 className="mb-3 font-medium">Add phone</h2>
+          <h2 className="mb-3 text-sm font-semibold text-[var(--fg)]">Add phone</h2>
           <form onSubmit={onAdd} className="flex flex-wrap gap-3">
             <Field label="Phone">
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} required />
@@ -106,7 +121,7 @@ export default function SuppressionPage() {
       ) : null}
 
       <Card>
-        <h2 className="mb-3 font-medium">Campaign send check</h2>
+        <h2 className="mb-3 text-sm font-semibold text-[var(--fg)]">Campaign send check</h2>
         <form onSubmit={onCheck} className="flex flex-wrap gap-3">
           <Field label="Phone">
             <Input
@@ -121,20 +136,29 @@ export default function SuppressionPage() {
             </Button>
           </div>
         </form>
-        {checkResult ? <p className="mt-3 text-sm">{checkResult}</p> : null}
+        {checkResult ? (
+          <div className="mt-3">
+            <Alert tone={checkResult.allowed ? "success" : "warning"}>
+              {checkResult.message}
+            </Alert>
+          </div>
+        ) : null}
       </Card>
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">Suppression list is empty.</p>
-        </Card>
+        <EmptyState
+          title="Suppression list is empty"
+          description="No phones are currently opted out."
+        />
       ) : (
         <Table headers={["Phone", "Opted out", "Source", "Actions"]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100">
+            <tr key={row.id} className="table-row-hover">
               <td className="px-3 py-2">{row.phoneE164}</td>
-              <td className="px-3 py-2">{new Date(row.optedOutDate).toLocaleString()}</td>
-              <td className="px-3 py-2">{row.source ?? "—"}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">
+                {new Date(row.optedOutDate).toLocaleString()}
+              </td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{row.source ?? "—"}</td>
               <td className="px-3 py-2">
                 {canWrite ? (
                   <Button variant="danger" onClick={() => void onRemove(row.phoneE164)}>

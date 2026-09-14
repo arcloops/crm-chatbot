@@ -2,7 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Customer = {
@@ -165,7 +177,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Customers" description="Closed / transacted contacts." />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -245,19 +257,19 @@ export default function CustomersPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">No customers yet.</p>
-        </Card>
+        <EmptyState title="No customers yet" description="Create a customer to get started." />
       ) : (
         <Table
           headers={["Code", "Name", "Phone", "Type", "Referrals", "Broker", "Actions"]}
         >
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100 align-top">
+            <tr key={row.id} className="table-row-hover align-top">
               <td className="px-3 py-2">{row.customerCode}</td>
               <td className="px-3 py-2">{row.name}</td>
               <td className="px-3 py-2">{row.phoneE164}</td>
-              <td className="px-3 py-2">{row.transactionType}</td>
+              <td className="px-3 py-2">
+                <Badge tone={statusTone(row.transactionType)}>{row.transactionType}</Badge>
+              </td>
               <td className="px-3 py-2">{row.referralCount ?? 0}</td>
               <td className="px-3 py-2">
                 {canWrite ? (
@@ -296,7 +308,7 @@ export default function CustomersPage() {
                       </Button>
                     </div>
                     {referralFor === row.id ? (
-                      <div className="space-y-2 rounded-md border border-zinc-200 p-2">
+                      <div className="space-y-2 rounded-md border border-[var(--border)] p-2">
                         <Field label="Name">
                           <Input
                             value={referral.name}

@@ -4,12 +4,16 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
+  Alert,
+  Badge,
   Button,
   Card,
+  EmptyState,
   Field,
   Input,
   PageHeader,
   Select,
+  statusTone,
   Table,
   TextArea,
 } from "@/components/ui";
@@ -142,7 +146,7 @@ export default function ListingsPage() {
         title="Listings"
         description="Inventory source of truth. Photo fields accept HTTPS URLs."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <Card>
         <div className="grid gap-3 md:grid-cols-4">
@@ -176,7 +180,7 @@ export default function ListingsPage() {
 
       {canWrite ? (
         <Card>
-          <h2 className="mb-3 font-medium">Create listing</h2>
+          <h2 className="mb-3 text-sm font-semibold text-[var(--fg)]">Create listing</h2>
           <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-2">
             <Field label="Title">
               <Input
@@ -291,25 +295,35 @@ export default function ListingsPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">No listings match these filters.</p>
-        </Card>
+        <EmptyState
+          title="No listings match these filters"
+          description="Try clearing filters or create a new listing."
+        />
       ) : (
         <Table headers={["Code", "Title", "Location", "Price", "Status", "Actions"]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100">
-              <td className="px-3 py-2">{row.listingCode}</td>
-              <td className="px-3 py-2">
-                <Link className="underline" href={`/dashboard/listings/${row.id}`}>
+            <tr key={row.id} className="table-row-hover">
+              <td className="px-3 py-2.5 font-mono text-xs text-[var(--fg-muted)]">
+                {row.listingCode}
+              </td>
+              <td className="px-3 py-2.5">
+                <Link
+                  className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+                  href={`/dashboard/listings/${row.id}`}
+                >
                   {row.title}
                 </Link>
               </td>
-              <td className="px-3 py-2">{row.location}</td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2.5 text-[var(--fg-muted)]">{row.location}</td>
+              <td className="px-3 py-2.5 tabular-nums">
                 {row.currency} {row.price}
               </td>
-              <td className="px-3 py-2">{row.availabilityStatus}</td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2.5">
+                <Badge tone={statusTone(row.availabilityStatus)}>
+                  {row.availabilityStatus}
+                </Badge>
+              </td>
+              <td className="px-3 py-2.5">
                 {canWrite ? (
                   <Button variant="secondary" onClick={() => void archive(row.id)}>
                     Archive

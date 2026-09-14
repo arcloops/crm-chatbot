@@ -49,16 +49,16 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center p-6">
-          <div className="max-w-md rounded-xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
-            <h1 className="text-lg font-semibold">Something went wrong</h1>
-            <p className="mt-2 text-sm text-zinc-600">
+        <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-6">
+          <div className="max-w-md rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-6 text-center shadow-[var(--shadow-sm)]">
+            <h1 className="text-lg font-semibold text-[var(--fg)]">Something went wrong</h1>
+            <p className="mt-2 text-sm text-[var(--fg-muted)]">
               The page crashed. Refresh to continue; the error was logged if monitoring is
               configured.
             </p>
             <button
               type="button"
-              className="mt-4 rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white"
+              className="mt-4 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]"
               onClick={() => this.setState({ hasError: false })}
             >
               Try again

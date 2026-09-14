@@ -2,7 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  FileButton,
+  PageHeader,
+  Select,
+  Spinner,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type ImportType = "listings" | "brokers" | "customers" | "prospects";
@@ -110,7 +122,7 @@ export default function ImportPage() {
 
   if (!allowedTypes.length) {
     return (
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-[var(--fg-muted)]">
         You need listings:write or contacts:write to import CSV files.
       </p>
     );
@@ -123,7 +135,7 @@ export default function ImportPage() {
         description="Import listings or contacts from a CSV file (max 500 rows). Download a template, fill it, then upload."
       />
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <Card>
         <form onSubmit={onSubmit} className="space-y-4">
@@ -147,30 +159,28 @@ export default function ImportPage() {
               </Select>
             </Field>
             <Field label="CSV file">
-              <input
-                type="file"
+              <FileButton
                 accept=".csv,text/csv"
-                className="block w-full text-sm"
-                onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+                fileName={fileName}
+                label="Choose CSV"
+                onFile={(file) => void onFile(file)}
               />
-              {fileName ? (
-                <p className="mt-1 text-xs text-zinc-500">Loaded: {fileName}</p>
-              ) : null}
             </Field>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="secondary" onClick={downloadTemplate}>
               Download template
             </Button>
             <Button type="submit" disabled={submitting || !csv.trim()}>
               {submitting ? "Importing…" : "Import CSV"}
             </Button>
+            {submitting ? <Spinner label="Processing rows…" /> : null}
           </div>
 
           <Field label="CSV preview / edit">
             <textarea
-              className="min-h-40 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-xs"
+              className="min-h-40 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-muted)]"
               value={csv}
               onChange={(e) => setCsv(e.target.value)}
               spellCheck={false}
@@ -178,7 +188,7 @@ export default function ImportPage() {
           </Field>
 
           {templates?.[type] ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-[var(--fg-faint)]">
               Required columns: {templates[type].headers.join(", ")}. Tags /
               amenities use | or ; separators. Photos must be full https URLs.
             </p>
@@ -188,17 +198,23 @@ export default function ImportPage() {
 
       {result ? (
         <Card>
-          <h2 className="mb-2 font-medium">Import result</h2>
-          <p className="mb-3 text-sm text-zinc-600">
+          <h2 className="mb-2 text-sm font-semibold text-[var(--fg)]">Import result</h2>
+          <p className="mb-3 text-sm text-[var(--fg-muted)]">
             {result.created} created, {result.failed} failed (of {result.total})
           </p>
           <Table headers={["Row", "Status", "Code", "Detail"]}>
             {result.results.map((r) => (
-              <tr key={r.row} className="border-t border-zinc-100">
-                <td className="px-3 py-2">{r.row}</td>
-                <td className="px-3 py-2">{r.ok ? "OK" : "Failed"}</td>
-                <td className="px-3 py-2">{r.code ?? "—"}</td>
-                <td className="px-3 py-2 text-sm text-zinc-600">
+              <tr key={r.row} className="table-row-hover">
+                <td className="px-3 py-2 tabular-nums">{r.row}</td>
+                <td className="px-3 py-2">
+                  <Badge tone={statusTone(r.ok ? "OK" : "FAILED")}>
+                    {r.ok ? "OK" : "Failed"}
+                  </Badge>
+                </td>
+                <td className="px-3 py-2 font-mono text-xs text-[var(--fg-muted)]">
+                  {r.code ?? "—"}
+                </td>
+                <td className="px-3 py-2 text-sm text-[var(--fg-muted)]">
                   {r.ok ? r.id : r.error}
                 </td>
               </tr>

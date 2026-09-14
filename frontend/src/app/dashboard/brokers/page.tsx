@@ -2,7 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Broker = {
@@ -140,7 +152,7 @@ export default function BrokersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Brokers" description="Internal partners and agents." />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       {canWrite ? (
         <Card>
@@ -215,7 +227,7 @@ export default function BrokersPage() {
                 <li>Active listings: {workload.counts.activeListings}</li>
                 <li>Assigned listings: {workload.counts.assignedListings}</li>
               </ul>
-              <ul className="mt-3 space-y-1 text-zinc-600">
+              <ul className="mt-3 space-y-1 text-[var(--fg-muted)]">
                 {Object.entries(workload.prospectsByStage).map(([stage, count]) => (
                   <li key={stage}>
                     {stage}: {count}
@@ -226,7 +238,7 @@ export default function BrokersPage() {
             <div className="text-sm">
               <p className="mb-1 font-medium">Open prospects</p>
               {workload.prospects.length === 0 ? (
-                <p className="text-zinc-500">None</p>
+                <p className="text-[var(--fg-faint)]">None</p>
               ) : (
                 <ul className="space-y-1">
                   {workload.prospects.slice(0, 8).map((p) => (
@@ -239,7 +251,7 @@ export default function BrokersPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">Select a broker to view workload.</p>
+          <p className="text-sm text-[var(--fg-faint)]">Select a broker to view workload.</p>
         )}
       </Card>
 
@@ -291,19 +303,23 @@ export default function BrokersPage() {
       ) : null}
 
       {rows.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">No brokers yet.</p>
-        </Card>
+        <EmptyState title="No brokers yet" description="Create a broker to get started." />
       ) : (
         <Table headers={["Code", "Name", "Phone", "Region", "Opt-in", "Status"]}>
           {rows.map((row) => (
-            <tr key={row.id} className="border-t border-zinc-100">
+            <tr key={row.id} className="table-row-hover">
               <td className="px-3 py-2">{row.brokerCode}</td>
               <td className="px-3 py-2">{row.name}</td>
               <td className="px-3 py-2">{row.phoneE164}</td>
-              <td className="px-3 py-2">{row.regionArea ?? "—"}</td>
-              <td className="px-3 py-2">{row.optInStatus ? "Yes" : "No"}</td>
-              <td className="px-3 py-2">{row.activeStatus}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{row.regionArea ?? "—"}</td>
+              <td className="px-3 py-2">
+                <Badge tone={row.optInStatus ? "success" : "danger"}>
+                  {row.optInStatus ? "Yes" : "No"}
+                </Badge>
+              </td>
+              <td className="px-3 py-2">
+                <Badge tone={statusTone(row.activeStatus)}>{row.activeStatus}</Badge>
+              </td>
             </tr>
           ))}
         </Table>

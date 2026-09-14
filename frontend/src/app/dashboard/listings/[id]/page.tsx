@@ -4,7 +4,18 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, Field, Input, PageHeader, Select } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Spinner,
+  statusTone,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Listing = {
@@ -85,7 +96,7 @@ export default function ListingDetailPage() {
   }
 
   if (!listing) {
-    return <p className="text-sm text-zinc-600">{error ?? "Loading…"}</p>;
+    return error ? <Alert tone="danger">{error}</Alert> : <Spinner />;
   }
 
   return (
@@ -94,44 +105,59 @@ export default function ListingDetailPage() {
         title={listing.title}
         description={`${listing.listingCode} · ${listing.location}`}
         actions={
-          <Link href="/dashboard/listings" className="text-sm underline">
+          <Link
+            href="/dashboard/listings"
+            className="text-sm font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+          >
             Back to listings
           </Link>
         }
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <ul className="space-y-2 text-sm">
+          <div className="mb-3">
+            <Badge tone={statusTone(listing.availabilityStatus)}>
+              {listing.availabilityStatus}
+            </Badge>
+          </div>
+          <ul className="space-y-2 text-sm text-[var(--fg-muted)]">
             <li>
-              <strong>Category:</strong> {listing.propertyCategory}
+              <span className="font-medium text-[var(--fg)]">Category:</span>{" "}
+              {listing.propertyCategory}
             </li>
             <li>
-              <strong>Transaction:</strong> {listing.transactionType}
+              <span className="font-medium text-[var(--fg)]">Transaction:</span>{" "}
+              {listing.transactionType}
             </li>
             <li>
-              <strong>Price:</strong> {listing.currency} {listing.price}
+              <span className="font-medium text-[var(--fg)]">Price:</span>{" "}
+              <span className="tabular-nums text-[var(--accent)]">
+                {listing.currency} {listing.price}
+              </span>
             </li>
             <li>
-              <strong>Beds/Baths:</strong> {listing.bedrooms ?? "—"} /{" "}
-              {listing.bathrooms ?? "—"}
+              <span className="font-medium text-[var(--fg)]">Beds/Baths:</span>{" "}
+              {listing.bedrooms ?? "—"} / {listing.bathrooms ?? "—"}
             </li>
             <li>
-              <strong>Broker:</strong> {listing.broker?.name ?? "—"}
+              <span className="font-medium text-[var(--fg)]">Broker:</span>{" "}
+              {listing.broker?.name ?? "—"}
             </li>
             <li>
-              <strong>Amenities:</strong>{" "}
+              <span className="font-medium text-[var(--fg)]">Amenities:</span>{" "}
               {listing.amenities.length ? listing.amenities.join(", ") : "—"}
             </li>
             <li>
-              <strong>Description:</strong> {listing.description ?? "—"}
+              <span className="font-medium text-[var(--fg)]">Description:</span>{" "}
+              {listing.description ?? "—"}
             </li>
           </ul>
         </Card>
 
         <Card>
-          <h2 className="mb-3 font-medium">Photos</h2>
+          <h2 className="mb-3 text-sm font-semibold text-[var(--fg)]">Photos</h2>
           <div className="mb-4 grid gap-2">
             {listing.photos.map((url) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -139,11 +165,11 @@ export default function ListingDetailPage() {
                 key={url}
                 src={url}
                 alt=""
-                className="h-40 w-full rounded-md object-cover"
+                className="h-40 w-full rounded-[var(--radius-sm)] object-cover"
               />
             ))}
             {!listing.photos.length ? (
-              <p className="text-sm text-zinc-500">No photos</p>
+              <p className="text-sm text-[var(--fg-faint)]">No photos</p>
             ) : null}
           </div>
 

@@ -4,7 +4,17 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { Button, Card, PageHeader, Table } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  PageHeader,
+  Spinner,
+  statusTone,
+  Table,
+} from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
 
 type Campaign = {
@@ -113,7 +123,7 @@ export default function CampaignDetailPage() {
   }
 
   if (!campaign) {
-    return <p className="text-sm text-zinc-600">{error ?? "Loading…"}</p>;
+    return error ? <Alert tone="danger">{error}</Alert> : <Spinner />;
   }
 
   return (
@@ -122,12 +132,15 @@ export default function CampaignDetailPage() {
         title={campaign.name}
         description={`${campaign.status} · ${campaign.audienceType} · ${campaign.templateName}`}
         actions={
-          <Link href="/dashboard/campaigns" className="text-sm underline">
+          <Link
+            href="/dashboard/campaigns"
+            className="text-sm text-[var(--accent)] underline-offset-2 hover:underline"
+          >
             Back
           </Link>
         }
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         {[
@@ -139,7 +152,7 @@ export default function CampaignDetailPage() {
           ["Failed", campaign.failedCount],
         ].map(([label, value]) => (
           <Card key={String(label)}>
-            <p className="text-xs text-zinc-500 uppercase">{label}</p>
+            <p className="text-xs text-[var(--fg-faint)] uppercase">{label}</p>
             <p className="text-2xl font-semibold">{value}</p>
           </Card>
         ))}
@@ -150,7 +163,7 @@ export default function CampaignDetailPage() {
           <div className="mb-2 flex items-center gap-2">
             <h2 className="font-medium">Actions</h2>
             <span
-              className="cursor-help rounded-full border border-zinc-300 px-2 text-xs text-zinc-500"
+              className="cursor-help rounded-full border border-[var(--border)] px-2 text-xs text-[var(--fg-faint)]"
               title="Run Preflight before Start. Preflight checks template approval, audience size, and opt-in filter."
             >
               ?
@@ -175,7 +188,7 @@ export default function CampaignDetailPage() {
             </Button>
           </div>
           {preview ? (
-            <p className="mt-3 text-sm text-zinc-600">
+            <p className="mt-3 text-sm text-[var(--fg-muted)]">
               Preview: {preview.eligible} eligible / {preview.total} total (
               {preview.skipped} skipped)
             </p>
@@ -183,7 +196,10 @@ export default function CampaignDetailPage() {
           {preflight ? (
             <ul className="mt-3 space-y-1 text-sm">
               {preflight.checks.map((c) => (
-                <li key={c.id} className={c.ok ? "text-green-700" : "text-red-600"}>
+                <li
+                  key={c.id}
+                  className={c.ok ? "text-[var(--success)]" : "text-[var(--danger)]"}
+                >
                   {c.ok ? "✓" : "✗"} {c.id}: {c.detail}
                 </li>
               ))}
@@ -198,7 +214,7 @@ export default function CampaignDetailPage() {
           <ul className="space-y-1 text-sm">
             {Object.entries(report.byStatus).map(([k, v]) => (
               <li key={k} className="flex justify-between">
-                <span>{k}</span>
+                <span className="text-[var(--fg-muted)]">{k}</span>
                 <span className="font-medium">{v}</span>
               </li>
             ))}
@@ -207,20 +223,21 @@ export default function CampaignDetailPage() {
       ) : null}
 
       {recipients.length === 0 ? (
-        <Card>
-          <p className="text-sm text-zinc-600">
-            No recipients materialized yet. Run Start (or Preview) first.
-          </p>
-        </Card>
+        <EmptyState
+          title="No recipients materialized yet"
+          description="Run Start (or Preview) first."
+        />
       ) : (
         <Table headers={["Phone", "Template", "Status", "Skip", "Sent"]}>
           {recipients.map((r) => (
-            <tr key={r.id} className="border-t border-zinc-100">
+            <tr key={r.id} className="table-row-hover">
               <td className="px-3 py-2">{r.phoneE164}</td>
-              <td className="px-3 py-2">{r.templateName ?? "—"}</td>
-              <td className="px-3 py-2">{r.status}</td>
-              <td className="px-3 py-2">{r.skipReason ?? "—"}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{r.templateName ?? "—"}</td>
               <td className="px-3 py-2">
+                <Badge tone={statusTone(r.status)}>{r.status}</Badge>
+              </td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">{r.skipReason ?? "—"}</td>
+              <td className="px-3 py-2 text-[var(--fg-muted)]">
                 {r.sentAt ? new Date(r.sentAt).toLocaleString() : "—"}
               </td>
             </tr>

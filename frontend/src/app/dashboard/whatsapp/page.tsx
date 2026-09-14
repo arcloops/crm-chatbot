@@ -3,12 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
+  Alert,
+  Badge,
   Button,
   Card,
+  EmptyState,
   Field,
   Input,
   PageHeader,
   Select,
+  statusTone,
   TextArea,
 } from "@/components/ui";
 import { apiFetch, can } from "@/lib/api";
@@ -142,7 +146,7 @@ export default function WhatsAppLabPage() {
         title="WhatsApp Lab"
         description="Mock BSP send/receive for development. Live Twilio deferred."
       />
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -190,19 +194,20 @@ export default function WhatsAppLabPage() {
               <Button type="submit">Send</Button>
             </form>
           ) : (
-            <p className="text-sm text-zinc-500">Write permission required to send.</p>
+            <p className="text-sm text-[var(--fg-muted)]">Write permission required to send.</p>
           )}
 
           <div className="mt-6">
             <h3 className="mb-2 text-sm font-medium">Templates</h3>
             {templates.length === 0 ? (
-              <p className="text-sm text-zinc-500">No templates seeded.</p>
+              <p className="text-sm text-[var(--fg-muted)]">No templates seeded.</p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {templates.map((t) => (
                   <li key={t.id}>
-                    <span className="font-medium">{t.name}</span>
-                    <span className="text-zinc-500"> — {t.bodyPreview}</span>
+                    <span className="font-medium">{t.name}</span>{" "}
+                    <Badge tone={statusTone(t.status)}>{t.status}</Badge>
+                    <span className="text-[var(--fg-muted)]"> — {t.bodyPreview}</span>
                   </li>
                 ))}
               </ul>
@@ -233,12 +238,12 @@ export default function WhatsAppLabPage() {
               </Button>
             </form>
           ) : (
-            <p className="text-sm text-zinc-500">Write permission required.</p>
+            <p className="text-sm text-[var(--fg-muted)]">Write permission required.</p>
           )}
-          <p className="mt-4 text-sm text-zinc-600">
+          <p className="mt-4 text-sm text-[var(--fg-muted)]">
             Session window: {windowRemaining()}
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-[var(--fg-faint)]">
             Window open: {windowOpen ? "yes" : "no"}
           </p>
         </Card>
@@ -248,19 +253,21 @@ export default function WhatsAppLabPage() {
         <Card>
           <h2 className="mb-3 font-medium">Conversations</h2>
           {conversations.length === 0 ? (
-            <p className="text-sm text-zinc-500">No conversations yet.</p>
+            <EmptyState title="No conversations yet" />
           ) : (
             <ul className="space-y-2 text-sm">
               {conversations.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
-                    className={`underline ${selectedId === c.id ? "font-semibold" : ""}`}
+                    className={`text-[var(--accent)] underline-offset-2 hover:underline ${
+                      selectedId === c.id ? "font-semibold" : ""
+                    }`}
                     onClick={() => void loadThread(c.id)}
                   >
                     {c.phoneE164}
                   </button>
-                  <span className="text-zinc-500">
+                  <span className="text-[var(--fg-muted)]">
                     {" "}
                     · {c._count?.messages ?? 0} msgs
                     {c.prospect ? ` · ${c.prospect.name}` : ""}
@@ -273,17 +280,17 @@ export default function WhatsAppLabPage() {
         <Card>
           <h2 className="mb-3 font-medium">Thread</h2>
           {messages.length === 0 ? (
-            <p className="text-sm text-zinc-500">Select a conversation.</p>
+            <p className="text-sm text-[var(--fg-muted)]">Select a conversation.</p>
           ) : (
             <ul className="max-h-96 space-y-2 overflow-y-auto text-sm">
               {messages.map((m) => (
                 <li
                   key={m.id}
                   className={`rounded-md px-2 py-1 ${
-                    m.direction === "OUT" ? "bg-zinc-100" : "bg-emerald-50"
+                    m.direction === "OUT" ? "bg-slate-100" : "bg-[var(--success-muted)]"
                   }`}
                 >
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-[var(--fg-faint)]">
                     {m.direction} · {m.type} · {m.status}
                   </div>
                   <div>{m.body ?? m.templateName ?? "—"}</div>
@@ -294,7 +301,7 @@ export default function WhatsAppLabPage() {
         </Card>
         <Card>
           <h2 className="mb-3 font-medium">Tips</h2>
-          <ol className="list-decimal space-y-2 pl-4 text-sm text-zinc-600">
+          <ol className="list-decimal space-y-2 pl-4 text-sm text-[var(--fg-muted)]">
             <li>Send a template to open outbound delivery without a window.</li>
             <li>Inject inbound to open the 24h session window.</li>
             <li>Then send free-form TEXT while the window is open.</li>
