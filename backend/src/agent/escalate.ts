@@ -8,7 +8,6 @@ export async function escalateConversation(opts: {
   summary: string;
   preferredRegion?: string | null;
 }) {
-  // Prefer broker by region, else round-robin least-assigned active broker
   let broker = opts.preferredRegion
     ? await prisma.broker.findFirst({
         where: {
@@ -64,16 +63,21 @@ export async function upsertProspectFromPhone(
     budgetMax?: number;
     intent?: string;
     leadSource?: string;
+    name?: string;
+    notes?: string;
   } = {},
 ) {
   const existing = await prisma.prospect.findUnique({ where: { phoneE164 } });
   if (existing) {
+    const keepGeneratedName = existing.name.startsWith("WhatsApp ");
     return prisma.prospect.update({
       where: { id: existing.id },
       data: {
+        name: patch.name && keepGeneratedName ? patch.name : existing.name,
         preferredLocation: patch.preferredLocation ?? existing.preferredLocation,
         budgetMax: patch.budgetMax != null ? patch.budgetMax : existing.budgetMax,
         intent: (patch.intent as never) ?? existing.intent,
+        notes: patch.notes ?? existing.notes,
         lastInteractionDate: new Date(),
       },
     });
@@ -83,12 +87,13 @@ export async function upsertProspectFromPhone(
   return prisma.prospect.create({
     data: {
       prospectCode,
-      name: `WhatsApp ${phoneE164}`,
+      name: patch.name?.trim() || `WhatsApp ${phoneE164}`,
       phone: phoneRaw,
       phoneE164,
       preferredLocation: patch.preferredLocation ?? null,
       budgetMax: patch.budgetMax ?? null,
       intent: (patch.intent as never) ?? null,
+      notes: patch.notes ?? null,
       leadSource: patch.leadSource ?? "whatsapp_bot",
       leadStage: LeadStage.NEW,
       lastInteractionDate: new Date(),

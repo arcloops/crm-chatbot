@@ -72,6 +72,12 @@ export class MockWhatsApp implements WhatsAppProvider {
           from: payload.from,
           body: payload.body,
           mediaUrl: typeof payload.mediaUrl === "string" ? payload.mediaUrl : undefined,
+          profileName:
+            typeof payload.profileName === "string"
+              ? payload.profileName
+              : typeof (payload as { profile_name?: unknown }).profile_name === "string"
+                ? (payload as { profile_name: string }).profile_name
+                : undefined,
           bspMessageId:
             typeof payload.bspMessageId === "string"
               ? payload.bspMessageId
@@ -79,6 +85,46 @@ export class MockWhatsApp implements WhatsAppProvider {
           timestamp: new Date().toISOString(),
         },
       ];
+    }
+
+    // Meta Cloud API-shaped payload
+    const entry = Array.isArray(payload.entry) ? payload.entry[0] : null;
+    const change =
+      entry && typeof entry === "object" && Array.isArray((entry as { changes?: unknown }).changes)
+        ? (entry as { changes: Array<{ value?: Record<string, unknown> }> }).changes[0]
+        : null;
+    const value = change?.value;
+    if (value && typeof value === "object") {
+      const messages = Array.isArray(value.messages) ? value.messages : [];
+      const contacts = Array.isArray(value.contacts) ? value.contacts : [];
+      const profileName =
+        contacts[0] &&
+        typeof contacts[0] === "object" &&
+        contacts[0] !== null &&
+        typeof (contacts[0] as { profile?: { name?: string } }).profile?.name === "string"
+          ? (contacts[0] as { profile: { name: string } }).profile.name
+          : undefined;
+      const events: InboundEvent[] = [];
+      for (const msg of messages) {
+        if (!msg || typeof msg !== "object") continue;
+        const m = msg as {
+          from?: string;
+          id?: string;
+          text?: { body?: string };
+          timestamp?: string;
+        };
+        if (typeof m.from === "string" && typeof m.text?.body === "string") {
+          events.push({
+            kind: "message",
+            from: m.from,
+            body: m.text.body,
+            bspMessageId: typeof m.id === "string" ? m.id : undefined,
+            profileName,
+            timestamp: m.timestamp,
+          });
+        }
+      }
+      if (events.length) return events;
     }
 
     return [];

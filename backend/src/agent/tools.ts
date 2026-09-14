@@ -3,17 +3,54 @@ import {
   LeadStage,
   ProspectIntent,
   PropertyCategory,
+  TransactionType,
   type Prisma,
 } from "@prisma/client";
 import { prisma } from "../lib/db.js";
 
 export type ListingSearchInput = {
   location?: string;
+  budgetMin?: number;
   budgetMax?: number;
+  minPrice?: number;
+  maxPrice?: number;
   bedrooms?: number;
   propertyCategory?: PropertyCategory;
-  intent?: ProspectIntent;
+  propertyType?: string;
+  intent?: ProspectIntent | "buy" | "rent" | "invest";
 };
+
+const PROPERTY_TYPE_MAP: Record<string, PropertyCategory> = {
+  apartment: PropertyCategory.APARTMENT,
+  flat: PropertyCategory.APARTMENT,
+  house: PropertyCategory.HOUSE,
+  land: PropertyCategory.LAND,
+  commercial: PropertyCategory.COMMERCIAL,
+  pre_launch: PropertyCategory.PRE_LAUNCH,
+  "pre-launch": PropertyCategory.PRE_LAUNCH,
+  mixed_use: PropertyCategory.MIXED_USE,
+  "mixed-use": PropertyCategory.MIXED_USE,
+};
+
+function mapIntentToTransaction(
+  intent?: ListingSearchInput["intent"],
+): TransactionType | undefined {
+  if (!intent) return undefined;
+  const key = String(intent).toLowerCase();
+  if (key === "buy" || key === "purchase") return TransactionType.SALE;
+  if (key === "rent") return TransactionType.RENT;
+  if (key === "invest" || key === "investment") return TransactionType.INVESTMENT;
+  if (key === "lease") return TransactionType.LEASE;
+  return undefined;
+}
+
+export function mapPropertyType(raw?: string): PropertyCategory | undefined {
+  if (!raw) return undefined;
+  const key = raw.trim().toLowerCase().replace(/\s+/g, "_");
+  if (PROPERTY_TYPE_MAP[key]) return PROPERTY_TYPE_MAP[key];
+  const upper = raw.trim().toUpperCase().replace(/[\s-]+/g, "_") as PropertyCategory;
+  return Object.values(PropertyCategory).includes(upper) ? upper : undefined;
+}
 
 export async function searchListings(input: ListingSearchInput) {
   const where: Prisma.ListingWhereInput = {
@@ -22,17 +59,32 @@ export async function searchListings(input: ListingSearchInput) {
       in: [AvailabilityStatus.AVAILABLE, AvailabilityStatus.COMING_SOON],
     },
   };
+
   if (input.location) {
-    where.location = { contains: input.location, mode: "insensitive" };
+    where.location = { contains: input.location.trim(), mode: "insensitive" };
   }
-  if (input.budgetMax != null) {
-    where.price = { lte: input.budgetMax };
+
+  const minPrice = input.minPrice ?? input.budgetMin;
+  const maxPrice = input.maxPrice ?? input.budgetMax;
+  if (minPrice != null || maxPrice != null) {
+    where.price = {
+      ...(minPrice != null ? { gte: minPrice } : {}),
+      ...(maxPrice != null ? { lte: maxPrice } : {}),
+    };
   }
+
   if (input.bedrooms != null) {
     where.bedrooms = { gte: input.bedrooms };
   }
-  if (input.propertyCategory) {
-    where.propertyCategory = input.propertyCategory;
+
+  const category = input.propertyCategory ?? mapPropertyType(input.propertyType);
+  if (category) {
+    where.propertyCategory = category;
+  }
+
+  const transactionType = mapIntentToTransaction(input.intent);
+  if (transactionType) {
+    where.transactionType = transactionType;
   }
 
   const data = await prisma.listing.findMany({
@@ -49,6 +101,7 @@ export async function searchListings(input: ListingSearchInput) {
       bedrooms: true,
       bathrooms: true,
       propertyCategory: true,
+      transactionType: true,
       availabilityStatus: true,
       photos: true,
     },
@@ -73,6 +126,14 @@ export async function getListingDetail(idOrCode: string) {
   });
   if (!listing) return null;
   return { ...listing, price: listing.price.toString() };
+}
+
+export async function listActiveLocationAreas() {
+  return prisma.locationArea.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
 }
 
 export function extractProspectFields(text: string): {
@@ -131,7 +192,11 @@ export function extractProspectFields(text: string): {
     out.wantsViewing = true;
   }
 
-  if (/human|agent|broker|talk to|speak to|escalate|help me|representative/.test(lower)) {
+  if (
+    /human|agent|broker|talk to|speak to|escalate|help me|representative|lawyer|legal|contract|negotiate|document/.test(
+      lower,
+    )
+  ) {
     out.wantsEscalate = true;
   }
 

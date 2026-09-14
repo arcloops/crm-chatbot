@@ -331,10 +331,32 @@ async function seedDeveloper() {
   });
 }
 
+async function seedLocationAreas() {
+  const areas = [
+    "Gulshan",
+    "Banani",
+    "Dhanmondi",
+    "Uttara",
+    "Mirpur",
+    "Bashundhara",
+    "Motijheel",
+    "Mohakhali",
+    "Baridhara",
+  ];
+  for (let i = 0; i < areas.length; i++) {
+    await prisma.locationArea.upsert({
+      where: { name: areas[i] },
+      update: { active: true, sortOrder: i },
+      create: { name: areas[i], active: true, sortOrder: i },
+    });
+  }
+}
+
 async function main() {
   console.log("Seeding Phases 1–13 baseline…");
   await seedAppMeta();
   await seedSettingsAndTemplates();
+  await seedLocationAreas();
   await seedStaff();
   await seedListingsAndContacts();
   await seedDeveloper();

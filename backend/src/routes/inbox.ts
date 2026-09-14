@@ -32,7 +32,22 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               prospectCode: true,
               leadStage: true,
+              preferredLocation: true,
+              budgetMax: true,
+              intent: true,
+              notes: true,
+              viewingAt: true,
+              viewingNote: true,
               assignedBroker: { select: { id: true, name: true } },
+              viewingRequests: {
+                orderBy: { createdAt: "desc" },
+                take: 3,
+                include: {
+                  listing: {
+                    select: { listingCode: true, title: true, location: true },
+                  },
+                },
+              },
             },
           },
           assignedStaff: { select: { id: true, name: true } },
@@ -55,6 +70,15 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
           prospect: {
             include: {
               assignedBroker: { select: { id: true, name: true, phoneE164: true } },
+              viewingRequests: {
+                orderBy: { createdAt: "desc" },
+                take: 5,
+                include: {
+                  listing: {
+                    select: { listingCode: true, title: true, location: true },
+                  },
+                },
+              },
             },
           },
           assignedStaff: { select: { id: true, name: true } },
@@ -186,12 +210,29 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
       const lastInbound = conversation.messages.find(
         (m) => m.direction === MessageDirection.IN,
       );
+      const history = conversation.messages
+        .slice()
+        .reverse()
+        .filter((m) => m.body)
+        .map((m) => ({
+          role:
+            m.direction === MessageDirection.IN
+              ? ("user" as const)
+              : ("assistant" as const),
+          content: m.body!,
+        }))
+        .filter((m) => m.content !== (lastInbound?.body ?? ""));
+
       const agent = getAgent();
       const suggestion = await agent.reply({
         phoneE164: conversation.phoneE164,
         userText: lastInbound?.body ?? "Help with property search",
+        history,
+        channel: "whatsapp",
+        conversationId: conversation.id,
+        prospectId: conversation.prospectId ?? undefined,
       });
-      return { suggestion: suggestion.text, agent: agent.name };
+      return { suggestion: suggestion.text, agent: agent.name, toolCalls: suggestion.toolCalls };
     },
   );
 };

@@ -120,6 +120,7 @@ model Listing {
 
   assignedBrokers Broker[]   @relation("BrokerListings")
   customers       Customer[]
+  viewingRequests ViewingRequest[]
 
   projectId String?  @map("project_id")
   project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -255,10 +256,53 @@ model Prospect {
   referredByDeveloperId String?    @map("referred_by_developer_id")
   referredByDeveloper   Developer? @relation("DeveloperProspects", fields: [referredByDeveloperId], references: [id], onDelete: SetNull)
 
+  notes String?
+
+  viewingRequests ViewingRequest[]
+
   @@index([leadStage])
   @@index([name])
   @@index([referredByDeveloperId])
   @@map("prospects")
+}
+
+enum ViewingRequestStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model ViewingRequest {
+  id            String               @id @default(cuid())
+  preferredDate String?              @map("preferred_date")
+  preferredTime String?              @map("preferred_time")
+  notes         String?
+  status        ViewingRequestStatus @default(REQUESTED)
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  prospectId String   @map("prospect_id")
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  listingId String?  @map("listing_id")
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([prospectId])
+  @@index([listingId])
+  @@index([status])
+  @@map("viewing_requests")
+}
+
+model LocationArea {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([active, sortOrder])
+  @@map("location_areas")
 }
 
 model SuppressionEntry {

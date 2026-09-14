@@ -70,6 +70,13 @@ export const prospectRoutes: FastifyPluginAsync = async (app) => {
         where,
         include: {
           assignedBroker: { select: { id: true, name: true, phoneE164: true } },
+          viewingRequests: {
+            orderBy: { createdAt: "desc" },
+            take: 3,
+            include: {
+              listing: { select: { listingCode: true, title: true } },
+            },
+          },
         },
         orderBy: { updatedAt: "desc" },
         take: Math.min(Number(q.limit ?? 100), 200),

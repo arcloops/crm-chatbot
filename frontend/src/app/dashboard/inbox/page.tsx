@@ -16,7 +16,20 @@ type Conversation = {
     name: string;
     prospectCode: string;
     leadStage: string;
+    preferredLocation?: string | null;
+    budgetMax?: string | null;
+    intent?: string | null;
+    notes?: string | null;
+    viewingAt?: string | null;
+    viewingNote?: string | null;
     assignedBroker?: { name: string } | null;
+    viewingRequests?: Array<{
+      id: string;
+      preferredDate?: string | null;
+      preferredTime?: string | null;
+      status: string;
+      listing?: { listingCode: string; title: string; location: string } | null;
+    }>;
   } | null;
   _count?: { messages: number };
 };
@@ -263,6 +276,45 @@ export default function InboxPage() {
               {conversation.escalationSummary ? (
                 <div className="shrink-0 border-b border-[var(--border)] bg-[var(--warning-muted)] px-4 py-2 text-xs text-[var(--warning)]">
                   {conversation.escalationSummary}
+                </div>
+              ) : null}
+
+              {conversation.prospect ? (
+                <div className="shrink-0 space-y-1 border-b border-[var(--border)] bg-[var(--bg)]/50 px-4 py-2 text-xs text-[var(--fg-muted)]">
+                  <p>
+                    {[
+                      conversation.prospect.preferredLocation
+                        ? `Area: ${conversation.prospect.preferredLocation}`
+                        : null,
+                      conversation.prospect.budgetMax
+                        ? `Budget max: ${conversation.prospect.budgetMax}`
+                        : null,
+                      conversation.prospect.intent
+                        ? `Intent: ${conversation.prospect.intent}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "No qualification fields captured yet"}
+                  </p>
+                  {conversation.prospect.notes ? (
+                    <p className="text-[var(--fg-faint)]">Notes: {conversation.prospect.notes}</p>
+                  ) : null}
+                  {conversation.prospect.viewingNote ||
+                  conversation.prospect.viewingRequests?.length ? (
+                    <p>
+                      Viewing:{" "}
+                      {conversation.prospect.viewingRequests?.[0]
+                        ? [
+                            conversation.prospect.viewingRequests[0].listing?.listingCode,
+                            conversation.prospect.viewingRequests[0].preferredDate,
+                            conversation.prospect.viewingRequests[0].preferredTime,
+                            conversation.prospect.viewingRequests[0].status,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : conversation.prospect.viewingNote}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 

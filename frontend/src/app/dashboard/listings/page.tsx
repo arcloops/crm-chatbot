@@ -75,6 +75,7 @@ export default function ListingsPage() {
   const canWrite = can(user, "listings:write");
   const [rows, setRows] = useState<Listing[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [activeOnly, setActiveOnly] = useState(true);
@@ -96,6 +97,9 @@ export default function ListingsPage() {
     load().catch((err) => setError(err instanceof Error ? err.message : "Failed"));
     apiFetch<{ data: Broker[] }>("/brokers")
       .then((res) => setBrokers(res.data))
+      .catch(() => undefined);
+    apiFetch<{ data: { id: string; name: string }[] }>("/locations")
+      .then((res) => setLocations(res.data.map((l) => l.name)))
       .catch(() => undefined);
   }, []);
 
@@ -227,11 +231,21 @@ export default function ListingsPage() {
             />
           </Field>
           <Field label="Location">
-            <Input
+            <Select
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               required
-            />
+            >
+              <option value="">Select area</option>
+              {locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+              {form.location && !locations.includes(form.location) ? (
+                <option value={form.location}>{form.location}</option>
+              ) : null}
+            </Select>
           </Field>
           <Field label="Category">
             <Select

@@ -29,12 +29,20 @@ type Prospect = {
   preferredLocation?: string | null;
   budgetMin?: string | null;
   budgetMax?: string | null;
+  notes?: string | null;
   optInStatus: boolean;
   convertedAt?: string | null;
   viewingAt?: string | null;
   viewingNote?: string | null;
   assignedBrokerId?: string | null;
   assignedBroker?: { id: string; name: string } | null;
+  viewingRequests?: Array<{
+    id: string;
+    preferredDate?: string | null;
+    preferredTime?: string | null;
+    status: string;
+    listing?: { listingCode: string; title: string } | null;
+  }>;
 };
 
 type Broker = { id: string; name: string };
@@ -334,7 +342,7 @@ export default function ProspectsPage() {
           description="Create one to get started."
         />
       ) : (
-        <Table headers={["Code", "Name", "Phone", "Stage", "Broker", "Actions"]}>
+        <Table headers={["Code", "Name", "Phone", "Qualification", "Stage", "Broker", "Actions"]}>
           {rows.map((row) => (
             <tr key={row.id} className="table-row-hover align-top">
               <td className="px-3 py-2">{row.prospectCode}</td>
@@ -345,6 +353,34 @@ export default function ProspectsPage() {
                 ) : null}
               </td>
               <td className="px-3 py-2">{row.phoneE164}</td>
+              <td className="px-3 py-2 text-xs text-[var(--fg-muted)]">
+                <div className="space-y-0.5">
+                  <p>
+                    {[
+                      row.preferredLocation,
+                      row.intent,
+                      row.budgetMax ? `max ${row.budgetMax}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
+                  </p>
+                  {row.notes ? <p className="text-[var(--fg-faint)]">{row.notes}</p> : null}
+                  {row.viewingRequests?.[0] || row.viewingNote ? (
+                    <p className="text-[var(--accent)]">
+                      Viewing:{" "}
+                      {row.viewingRequests?.[0]
+                        ? [
+                            row.viewingRequests[0].listing?.listingCode,
+                            row.viewingRequests[0].preferredDate,
+                            row.viewingRequests[0].preferredTime,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : row.viewingNote}
+                    </p>
+                  ) : null}
+                </div>
+              </td>
               <td className="px-3 py-2">
                 {canWrite && !row.convertedAt ? (
                   <Select

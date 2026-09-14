@@ -9,8 +9,10 @@ import {
 } from "@prisma/client";
 import { getAgent } from "../agent/index.js";
 import { escalateConversation, upsertProspectFromPhone } from "../agent/escalate.js";
+import type { AgentMessage } from "../agent/types.js";
 import { classifyComplianceKeyword, recordConsent } from "../lib/consent.js";
 import { prisma } from "../lib/db.js";
+import { getLogger } from "../lib/logger.js";
 import { windowExpiresFrom } from "../lib/messaging.js";
 import { normalizePhone } from "../lib/phone.js";
 import { getWhatsAppProvider } from "../whatsapp/index.js";
@@ -45,12 +47,32 @@ async function sendBotText(phoneE164: string, body: string, conversationId: stri
   });
 }
 
+async function loadHistory(conversationId: string): Promise<AgentMessage[]> {
+  const rows = await prisma.message.findMany({
+    where: {
+      conversationId,
+      body: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { direction: true, body: true },
+  });
+  return rows
+    .reverse()
+    .filter((m) => m.body && m.body.trim())
+    .map((m) => ({
+      role: m.direction === MessageDirection.IN ? ("user" as const) : ("assistant" as const),
+      content: m.body!,
+    }));
+}
+
 /** Shared inbound handler for webhook + mock inbound. */
 export async function handleInboundMessage(opts: {
   from: string;
   body: string;
   bspMessageId?: string | null;
   mediaUrl?: string | null;
+  profileName?: string | null;
 }) {
   let phoneE164: string;
   try {
@@ -60,7 +82,9 @@ export async function handleInboundMessage(opts: {
   }
 
   const now = new Date();
-  let prospect = await upsertProspectFromPhone(phoneE164, opts.from);
+  let prospect = await upsertProspectFromPhone(phoneE164, opts.from, {
+    name: opts.profileName?.trim() || undefined,
+  });
   let conversation = await upsertConversation(phoneE164, prospect.id);
 
   conversation = await prisma.conversation.update({
@@ -89,6 +113,9 @@ export async function handleInboundMessage(opts: {
     data: {
       lastInteractionDate: now,
       conversationHistoryRef: conversation.id,
+      ...(opts.profileName?.trim() && prospect.name.startsWith("WhatsApp ")
+        ? { name: opts.profileName.trim() }
+        : {}),
     },
   });
 
@@ -154,10 +181,22 @@ export async function handleInboundMessage(opts: {
     };
   }
 
+  const history = await loadHistory(conversation.id);
+  // Exclude the message we just stored so the agent sees prior turns + current as userText
+  const priorHistory =
+    history.length && history[history.length - 1]?.content === opts.body
+      ? history.slice(0, -1)
+      : history;
+
   const agent = getAgent();
   const reply = await agent.reply({
     phoneE164,
     userText: opts.body,
+    history: priorHistory,
+    channel: "whatsapp",
+    conversationId: conversation.id,
+    prospectId: prospect.id,
+    profileName: opts.profileName?.trim() || undefined,
   });
 
   if (reply.extracted) {
@@ -170,6 +209,10 @@ export async function handleInboundMessage(opts: {
           reply.extracted.budgetMax != null
             ? reply.extracted.budgetMax
             : prospect.budgetMax,
+        budgetMin:
+          reply.extracted.budgetMin != null
+            ? reply.extracted.budgetMin
+            : prospect.budgetMin,
         intent: reply.extracted.intent
           ? (reply.extracted.intent as ProspectIntent)
           : prospect.intent,
@@ -178,7 +221,8 @@ export async function handleInboundMessage(opts: {
     });
   }
 
-  if (reply.bookViewing) {
+  // Tool executors may already have set viewing / escalate; keep inbound sync for flags
+  if (reply.bookViewing && !reply.viewingNote?.includes("LST-")) {
     await prisma.prospect.update({
       where: { id: prospect.id },
       data: {
@@ -191,12 +235,26 @@ export async function handleInboundMessage(opts: {
   }
 
   if (reply.escalate) {
-    await escalateConversation({
-      conversationId: conversation.id,
-      prospectId: prospect.id,
-      summary: reply.escalationSummary ?? opts.body.slice(0, 200),
-      preferredRegion: reply.extracted?.preferredLocation ?? prospect.preferredLocation,
+    const fresh = await prisma.conversation.findUnique({
+      where: { id: conversation.id },
+      select: { humanTakeover: true },
     });
+    if (fresh && !fresh.humanTakeover) {
+      const escalated = await escalateConversation({
+        conversationId: conversation.id,
+        prospectId: prospect.id,
+        summary: reply.escalationSummary ?? opts.body.slice(0, 200),
+        preferredRegion: reply.extracted?.preferredLocation ?? prospect.preferredLocation,
+      });
+      getLogger({ route: "whatsapp/inbound" }).info(
+        {
+          conversationId: conversation.id,
+          brokerId: escalated.broker?.id,
+          brokerName: escalated.broker?.name,
+        },
+        "Broker handoff notification (stub)",
+      );
+    }
   }
 
   if (reply.text) {
@@ -205,7 +263,6 @@ export async function handleInboundMessage(opts: {
     if (windowOpen) {
       await sendBotText(phoneE164, reply.text, conversation.id);
     } else {
-      // Outside window: try template hello_world as fallback notice
       const provider = await getWhatsAppProvider();
       const settings = await prisma.appSettings.findUnique({
         where: { id: "default" },
@@ -234,5 +291,6 @@ export async function handleInboundMessage(opts: {
     ok: true,
     conversationId: conversation.id,
     action: reply.escalate ? "escalated" : "bot_replied",
+    toolCalls: reply.toolCalls,
   };
 }

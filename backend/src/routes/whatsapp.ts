@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
+import { getLogger } from "../lib/logger.js";
 import { assertCanMessage } from "../lib/messaging.js";
 import { requirePermission } from "../plugins/auth.js";
 import { getWhatsAppProvider } from "../whatsapp/index.js";
@@ -48,6 +49,8 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
       request.body,
       request.headers as Record<string, string | string[] | undefined>,
     );
+
+    const inboundJobs: Array<() => Promise<unknown>> = [];
 
     for (const event of events) {
       if (event.kind === "status" && event.bspMessageId) {
@@ -99,16 +102,34 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
       }
 
       if (event.kind === "message" && event.from && event.body) {
-        await handleInboundMessage({
-          from: event.from,
-          body: event.body,
-          bspMessageId: event.bspMessageId,
-          mediaUrl: event.mediaUrl,
-        });
+        const from = event.from;
+        const body = event.body;
+        const bspMessageId = event.bspMessageId;
+        const mediaUrl = event.mediaUrl;
+        const profileName = event.profileName;
+        inboundJobs.push(() =>
+          handleInboundMessage({
+            from,
+            body,
+            bspMessageId,
+            mediaUrl,
+            profileName,
+          }),
+        );
       }
     }
 
-    return { ok: true, processed: events.length };
+    // Ack Meta immediately; run Claude/agent work without blocking the webhook.
+    for (const job of inboundJobs) {
+      void job().catch((err) =>
+        getLogger({ route: "webhooks/whatsapp" }).error(
+          { err },
+          "Inbound handler failed",
+        ),
+      );
+    }
+
+    return { ok: true, processed: events.length, queued: inboundJobs.length };
   });
 
   app.get(
@@ -268,6 +289,7 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
         .object({
           from: z.string().min(5),
           body: z.string().min(1),
+          profileName: z.string().min(1).optional(),
         })
         .safeParse(request.body);
       if (!parsed.success) {
@@ -277,6 +299,7 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
       const result = await handleInboundMessage({
         from: parsed.data.from,
         body: parsed.data.body,
+        profileName: parsed.data.profileName,
       });
 
       const conversation = await prisma.conversation.findUnique({

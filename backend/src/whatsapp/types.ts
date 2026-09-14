@@ -31,6 +31,7 @@ export type InboundEvent = {
   status?: "SENT" | "DELIVERED" | "READ" | "FAILED";
   errorCode?: string;
   timestamp?: string;
+  profileName?: string;
 };
 
 export interface WhatsAppProvider {

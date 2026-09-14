@@ -62,6 +62,19 @@ function serializeListing(listing: {
 
 export const listingRoutes: FastifyPluginAsync = async (app) => {
   app.get(
+    "/locations",
+    { preHandler: requirePermission("listings:read") },
+    async () => {
+      const data = await prisma.locationArea.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true },
+      });
+      return { data };
+    },
+  );
+
+  app.get(
     "/listings",
     { preHandler: requirePermission("listings:read") },
     async (request) => {

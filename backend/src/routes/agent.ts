@@ -55,6 +55,7 @@ export const agentRoutes: FastifyPluginAsync = async (app) => {
         bookViewing: Boolean(result.bookViewing),
         extracted: result.extracted ?? null,
         listings: result.listings ?? [],
+        toolCalls: result.toolCalls ?? [],
         staff: { id: staff.sub, name: staff.name, email: staff.email },
       };
     },
