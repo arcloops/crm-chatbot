@@ -11,6 +11,7 @@ import {
   mergeSideEffects,
   type ToolSideEffects,
 } from "./toolExecutors.js";
+import { normalizeProspectIntent } from "./tools.js";
 import type { AgentMessage, AgentProvider, AgentReply, AgentReplyInput } from "./types.js";
 
 type AnthropicContentBlock =
@@ -165,10 +166,7 @@ export class ClaudeAgent implements AgentProvider {
               budgetMax: sideEffects.extracted.budgetMax,
               budgetMin: sideEffects.extracted.budgetMin,
               preferredLocation: sideEffects.extracted.preferredLocation,
-              intent:
-                typeof sideEffects.extracted.intent === "string"
-                  ? sideEffects.extracted.intent
-                  : undefined,
+              intent: normalizeProspectIntent(sideEffects.extracted.intent),
               bedrooms: sideEffects.extracted.bedrooms,
             }
           : undefined,

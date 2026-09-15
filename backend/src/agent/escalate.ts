@@ -1,6 +1,7 @@
-import { ActiveStatus, LeadStage } from "@prisma/client";
+import { ActiveStatus, LeadStage, type ProspectIntent } from "@prisma/client";
 import { prisma } from "../lib/db.js";
 import { nextCode } from "../lib/ids.js";
+import { normalizeProspectIntent } from "./tools.js";
 
 export async function escalateConversation(opts: {
   conversationId: string;
@@ -61,12 +62,13 @@ export async function upsertProspectFromPhone(
   patch: {
     preferredLocation?: string;
     budgetMax?: number;
-    intent?: string;
+    intent?: string | ProspectIntent;
     leadSource?: string;
     name?: string;
     notes?: string;
   } = {},
 ) {
+  const intent = normalizeProspectIntent(patch.intent) ?? undefined;
   const existing = await prisma.prospect.findUnique({ where: { phoneE164 } });
   if (existing) {
     const keepGeneratedName = existing.name.startsWith("WhatsApp ");
@@ -76,7 +78,7 @@ export async function upsertProspectFromPhone(
         name: patch.name && keepGeneratedName ? patch.name : existing.name,
         preferredLocation: patch.preferredLocation ?? existing.preferredLocation,
         budgetMax: patch.budgetMax != null ? patch.budgetMax : existing.budgetMax,
-        intent: (patch.intent as never) ?? existing.intent,
+        intent: intent ?? existing.intent,
         notes: patch.notes ?? existing.notes,
         lastInteractionDate: new Date(),
       },
@@ -92,7 +94,7 @@ export async function upsertProspectFromPhone(
       phoneE164,
       preferredLocation: patch.preferredLocation ?? null,
       budgetMax: patch.budgetMax ?? null,
-      intent: (patch.intent as never) ?? null,
+      intent: intent ?? null,
       notes: patch.notes ?? null,
       leadSource: patch.leadSource ?? "whatsapp_bot",
       leadStage: LeadStage.NEW,

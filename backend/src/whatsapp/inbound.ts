@@ -4,11 +4,11 @@ import {
   MessageDirection,
   MessageStatus,
   MessageType,
-  ProspectIntent,
   WhatsAppMode,
 } from "@prisma/client";
 import { getAgent } from "../agent/index.js";
 import { escalateConversation, upsertProspectFromPhone } from "../agent/escalate.js";
+import { normalizeProspectIntent } from "../agent/tools.js";
 import type { AgentMessage } from "../agent/types.js";
 import { classifyComplianceKeyword, recordConsent } from "../lib/consent.js";
 import { prisma } from "../lib/db.js";
@@ -200,25 +200,31 @@ export async function handleInboundMessage(opts: {
   });
 
   if (reply.extracted) {
-    prospect = await prisma.prospect.update({
-      where: { id: prospect.id },
-      data: {
-        preferredLocation:
-          reply.extracted.preferredLocation ?? prospect.preferredLocation,
-        budgetMax:
-          reply.extracted.budgetMax != null
-            ? reply.extracted.budgetMax
-            : prospect.budgetMax,
-        budgetMin:
-          reply.extracted.budgetMin != null
-            ? reply.extracted.budgetMin
-            : prospect.budgetMin,
-        intent: reply.extracted.intent
-          ? (reply.extracted.intent as ProspectIntent)
-          : prospect.intent,
-        lastInteractionDate: now,
-      },
-    });
+    try {
+      prospect = await prisma.prospect.update({
+        where: { id: prospect.id },
+        data: {
+          preferredLocation:
+            reply.extracted.preferredLocation ?? prospect.preferredLocation,
+          budgetMax:
+            reply.extracted.budgetMax != null
+              ? reply.extracted.budgetMax
+              : prospect.budgetMax,
+          budgetMin:
+            reply.extracted.budgetMin != null
+              ? reply.extracted.budgetMin
+              : prospect.budgetMin,
+          intent:
+            normalizeProspectIntent(reply.extracted.intent) ?? prospect.intent,
+          lastInteractionDate: now,
+        },
+      });
+    } catch (err) {
+      getLogger({ route: "whatsapp/inbound" }).warn(
+        { err, prospectId: prospect.id, extracted: reply.extracted },
+        "Failed to persist qualification fields",
+      );
+    }
   }
 
   // Tool executors may already have set viewing / escalate; keep inbound sync for flags

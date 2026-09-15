@@ -136,6 +136,21 @@ export async function listActiveLocationAreas() {
   });
 }
 
+/** Map Claude/tool intent strings to Prisma ProspectIntent. */
+export function normalizeProspectIntent(
+  raw?: string | ProspectIntent | null,
+): ProspectIntent | undefined {
+  if (!raw) return undefined;
+  if (raw === ProspectIntent.BUY || raw === ProspectIntent.RENT || raw === ProspectIntent.INVEST) {
+    return raw;
+  }
+  const key = String(raw).trim().toLowerCase();
+  if (key === "buy" || key === "purchase") return ProspectIntent.BUY;
+  if (key === "rent") return ProspectIntent.RENT;
+  if (key === "invest" || key === "investment") return ProspectIntent.INVEST;
+  return undefined;
+}
+
 export function extractProspectFields(text: string): {
   budgetMax?: number;
   preferredLocation?: string;

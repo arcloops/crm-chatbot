@@ -2,7 +2,7 @@ import { LeadStage, ProspectIntent } from "@prisma/client";
 import { getLogger } from "../lib/logger.js";
 import { prisma } from "../lib/db.js";
 import { escalateConversation, upsertProspectFromPhone } from "./escalate.js";
-import { getListingDetail, searchListings } from "./tools.js";
+import { getListingDetail, normalizeProspectIntent, searchListings } from "./tools.js";
 
 export type ToolContext = {
   phoneE164: string;
@@ -18,8 +18,9 @@ export type ToolCallLog = {
   result: unknown;
 };
 
-function parseBudgetNumber(raw?: string): number | undefined {
-  if (!raw) return undefined;
+function parseBudgetNumber(raw?: string | number): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw !== "string") return undefined;
   const cleaned = raw.trim().toLowerCase().replace(/,/g, "");
   const match = cleaned.match(/([\d.]+)\s*(cr|crore|lakh|lac)?/);
   if (!match) return undefined;
@@ -32,12 +33,7 @@ function parseBudgetNumber(raw?: string): number | undefined {
 }
 
 function mapIntent(raw?: string): ProspectIntent | undefined {
-  if (!raw) return undefined;
-  const key = raw.toLowerCase();
-  if (key === "buy" || key === "purchase") return ProspectIntent.BUY;
-  if (key === "rent") return ProspectIntent.RENT;
-  if (key === "invest" || key === "investment") return ProspectIntent.INVEST;
-  return undefined;
+  return normalizeProspectIntent(raw);
 }
 
 export async function executeTool(
@@ -91,6 +87,29 @@ export async function executeTool(
         bedrooms,
         intent,
       });
+
+      const normalizedIntent = normalizeProspectIntent(intent);
+      // Persist qualification on real WhatsApp numbers even if capture_lead was skipped.
+      if (ctx.phoneE164 && !ctx.phoneE164.startsWith("staff:")) {
+        try {
+          const saved = await upsertProspectFromPhone(ctx.phoneE164, ctx.phoneE164, {
+            preferredLocation: location,
+            budgetMax: maxPrice,
+            intent: normalizedIntent,
+            leadSource: "whatsapp_bot",
+            name: ctx.profileName,
+          });
+          if (ctx.conversationId) {
+            await prisma.conversation.update({
+              where: { id: ctx.conversationId },
+              data: { prospectId: saved.id },
+            });
+          }
+        } catch (err) {
+          log.warn({ err }, "Failed to persist search qualification on prospect");
+        }
+      }
+
       return {
         content: { count: listings.length, listings },
         sideEffects: {
@@ -105,7 +124,7 @@ export async function executeTool(
             preferredLocation: location,
             budgetMax: maxPrice,
             budgetMin: minPrice,
-            intent: typeof rawInput.intent === "string" ? rawInput.intent : undefined,
+            intent: normalizedIntent,
             bedrooms,
           },
         },
@@ -155,7 +174,9 @@ export async function executeTool(
         typeof rawInput.intent === "string" ? rawInput.intent : undefined,
       );
       const budgetMax = parseBudgetNumber(
-        typeof rawInput.budget === "string" ? rawInput.budget : undefined,
+        typeof rawInput.budget === "string" || typeof rawInput.budget === "number"
+          ? (rawInput.budget as string | number)
+          : undefined,
       );
       const notes = typeof rawInput.notes === "string" ? rawInput.notes : undefined;
 
@@ -180,7 +201,7 @@ export async function executeTool(
           extracted: {
             preferredLocation: preferredLocation ?? undefined,
             budgetMax,
-            intent,
+            intent: intent ?? undefined,
           },
         },
       };

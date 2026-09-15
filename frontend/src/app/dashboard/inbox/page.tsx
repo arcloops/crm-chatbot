@@ -294,7 +294,8 @@ export default function InboxPage() {
                         : null,
                     ]
                       .filter(Boolean)
-                      .join(" · ") || "No qualification fields captured yet"}
+                      .join(" · ") ||
+                      "Qualification not captured yet — appears after the prospect shares area, budget, or buy/rent (Chat staff tests do not update Inbox)."}
                   </p>
                   {conversation.prospect.notes ? (
                     <p className="text-[var(--fg-faint)]">Notes: {conversation.prospect.notes}</p>
