@@ -18,6 +18,9 @@ LOG_LEVEL=info
 # Link from Railway Postgres / Redis (use Variable References in UI):
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 REDIS_URL=${{Redis.REDIS_URL}}
+# If Redis uses TLS, Railway usually provides rediss:// automatically via REDIS_URL.
+# Confirm the backend service has Redis linked (Variables → Add Reference → Redis.REDIS_URL).
+# A wrong/missing REDIS_URL causes /health redis error / degraded status.
 
 # Auth — use a long random string (≥16 chars), keep it secret
 JWT_SECRET=paste-a-long-random-secret-here

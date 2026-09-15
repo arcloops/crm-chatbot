@@ -10,6 +10,7 @@ import { Redis } from "ioredis";
 import { prisma } from "../lib/db.js";
 import { getLogger } from "../lib/logger.js";
 import { env } from "../lib/env.js";
+import { redisConnectionOptions } from "../lib/redis.js";
 import { getWhatsAppProvider } from "../whatsapp/index.js";
 
 const log = getLogger({ module: "campaign-worker" });
@@ -22,9 +23,12 @@ let queue: Queue | null = null;
 let worker: Worker | null = null;
 
 function createRedis(): Redis {
+  // BullMQ requires maxRetriesPerRequest: null
   return new Redis(env().REDIS_URL, {
+    ...redisConnectionOptions(),
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    lazyConnect: false,
   });
 }
 
