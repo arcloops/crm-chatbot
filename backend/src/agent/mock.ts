@@ -1,4 +1,4 @@
-import { extractProspectFields, getListingDetail, searchListings } from "./tools.js";
+import { extractProspectFields, getListingDetail } from "./tools.js";
 import {
   executeTool,
   mergeSideEffects,
