@@ -279,24 +279,33 @@ export default function InboxPage() {
                 </div>
               ) : null}
 
-              {conversation.prospect ? (
+              {conversation.prospect &&
+              (conversation.prospect.preferredLocation ||
+                conversation.prospect.budgetMax ||
+                conversation.prospect.intent ||
+                conversation.prospect.notes ||
+                conversation.prospect.viewingNote ||
+                conversation.prospect.viewingRequests?.length) ? (
                 <div className="shrink-0 space-y-1 border-b border-[var(--border)] bg-[var(--bg)]/50 px-4 py-2 text-xs text-[var(--fg-muted)]">
-                  <p>
-                    {[
-                      conversation.prospect.preferredLocation
-                        ? `Area: ${conversation.prospect.preferredLocation}`
-                        : null,
-                      conversation.prospect.budgetMax
-                        ? `Budget max: ${conversation.prospect.budgetMax}`
-                        : null,
-                      conversation.prospect.intent
-                        ? `Intent: ${conversation.prospect.intent}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") ||
-                      "Qualification not captured yet — appears after the prospect shares area, budget, or buy/rent (Chat staff tests do not update Inbox)."}
-                  </p>
+                  {(conversation.prospect.preferredLocation ||
+                    conversation.prospect.budgetMax ||
+                    conversation.prospect.intent) && (
+                    <p>
+                      {[
+                        conversation.prospect.preferredLocation
+                          ? `Area: ${conversation.prospect.preferredLocation}`
+                          : null,
+                        conversation.prospect.budgetMax
+                          ? `Budget max: ${conversation.prospect.budgetMax}`
+                          : null,
+                        conversation.prospect.intent
+                          ? `Intent: ${conversation.prospect.intent}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                   {conversation.prospect.notes ? (
                     <p className="text-[var(--fg-faint)]">Notes: {conversation.prospect.notes}</p>
                   ) : null}

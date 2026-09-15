@@ -23,7 +23,11 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
             : {};
 
       const data = await prisma.conversation.findMany({
-        where,
+        where: {
+          ...where,
+          // Hide staff Chat test sessions from Inbox
+          NOT: { phoneE164: { startsWith: "staff:" } },
+        },
         orderBy: [{ escalatedAt: "desc" }, { updatedAt: "desc" }],
         include: {
           prospect: {

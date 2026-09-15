@@ -162,6 +162,32 @@ export async function executeTool(
         typeof rawInput.phone === "string" && rawInput.phone.trim()
           ? rawInput.phone.trim()
           : ctx.phoneE164;
+      // Dashboard Chat uses staff:… session keys — never create Inbox prospects from those.
+      if (!phone || phone.startsWith("staff:")) {
+        return {
+          content: {
+            ok: false,
+            skipped: true,
+            reason: "Staff dashboard sessions do not create WhatsApp prospects",
+          },
+          sideEffects: {
+            extracted: {
+              preferredLocation:
+                typeof rawInput.preferred_location === "string"
+                  ? rawInput.preferred_location
+                  : undefined,
+              budgetMax: parseBudgetNumber(
+                typeof rawInput.budget === "string" || typeof rawInput.budget === "number"
+                  ? (rawInput.budget as string | number)
+                  : undefined,
+              ),
+              intent: mapIntent(
+                typeof rawInput.intent === "string" ? rawInput.intent : undefined,
+              ),
+            },
+          },
+        };
+      }
       const name =
         (typeof rawInput.name === "string" && rawInput.name.trim()) ||
         ctx.profileName ||
