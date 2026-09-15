@@ -78,7 +78,7 @@ export class ClaudeAgent implements AgentProvider {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-3-5-haiku-latest",
+            model: "claude-haiku-4-5",
             max_tokens: 1024,
             system,
             tools: AGENT_TOOLS,
@@ -87,8 +87,9 @@ export class ClaudeAgent implements AgentProvider {
         });
 
         if (!res.ok) {
+          const errBody = await res.text().catch(() => "");
           getLogger({ route: "agent/claude" }).warn(
-            { status: res.status },
+            { status: res.status, body: errBody.slice(0, 500) },
             "Anthropic request failed; falling back to mock",
           );
           return new MockAgent().reply(input);
