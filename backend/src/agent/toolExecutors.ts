@@ -50,17 +50,46 @@ export async function executeTool(
 
   switch (name) {
     case "search_listings": {
+      const location =
+        typeof rawInput.location === "string" ? rawInput.location.trim() : undefined;
+      const propertyType =
+        typeof rawInput.property_type === "string" ? rawInput.property_type : undefined;
+      const minPrice = typeof rawInput.min_price === "number" ? rawInput.min_price : undefined;
+      const maxPrice = typeof rawInput.max_price === "number" ? rawInput.max_price : undefined;
+      const bedrooms = typeof rawInput.bedrooms === "number" ? rawInput.bedrooms : undefined;
+      const intent =
+        typeof rawInput.intent === "string"
+          ? (rawInput.intent as "buy" | "rent" | "invest")
+          : undefined;
+
+      const hasFilter = Boolean(
+        (location && location.length > 0) ||
+          propertyType ||
+          minPrice != null ||
+          maxPrice != null ||
+          bedrooms != null ||
+          intent,
+      );
+
+      if (!hasFilter) {
+        return {
+          content: {
+            count: 0,
+            listings: [],
+            error:
+              "No search filters provided. Ask the user for location, budget, bedrooms, property type, or buy/rent/invest before searching. Do not invent listings.",
+          },
+          sideEffects: {},
+        };
+      }
+
       const listings = await searchListings({
-        location: typeof rawInput.location === "string" ? rawInput.location : undefined,
-        propertyType:
-          typeof rawInput.property_type === "string" ? rawInput.property_type : undefined,
-        minPrice: typeof rawInput.min_price === "number" ? rawInput.min_price : undefined,
-        maxPrice: typeof rawInput.max_price === "number" ? rawInput.max_price : undefined,
-        bedrooms: typeof rawInput.bedrooms === "number" ? rawInput.bedrooms : undefined,
-        intent:
-          typeof rawInput.intent === "string"
-            ? (rawInput.intent as "buy" | "rent" | "invest")
-            : undefined,
+        location,
+        propertyType,
+        minPrice,
+        maxPrice,
+        bedrooms,
+        intent,
       });
       return {
         content: { count: listings.length, listings },
@@ -73,12 +102,11 @@ export async function executeTool(
             currency: l.currency,
           })),
           extracted: {
-            preferredLocation:
-              typeof rawInput.location === "string" ? rawInput.location : undefined,
-            budgetMax: typeof rawInput.max_price === "number" ? rawInput.max_price : undefined,
-            budgetMin: typeof rawInput.min_price === "number" ? rawInput.min_price : undefined,
+            preferredLocation: location,
+            budgetMax: maxPrice,
+            budgetMin: minPrice,
             intent: typeof rawInput.intent === "string" ? rawInput.intent : undefined,
-            bedrooms: typeof rawInput.bedrooms === "number" ? rawInput.bedrooms : undefined,
+            bedrooms,
           },
         },
       };

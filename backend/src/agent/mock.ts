@@ -105,6 +105,24 @@ export class MockAgent implements AgentProvider {
       };
     }
 
+    const hasSearchIntent = Boolean(
+      extracted.preferredLocation ||
+        extracted.budgetMax ||
+        extracted.bedrooms ||
+        extracted.intent ||
+        /\b(list(ing)?s?|propert(y|ies)|apartment|flat|available|inventory|show me|search)\b/i.test(
+          input.userText,
+        ),
+    );
+
+    if (!hasSearchIntent) {
+      return {
+        text: "Hi — I can help with live inventory. Tell me an area, budget, or buy/rent, and I'll find matching listings.",
+        extracted,
+        toolCalls,
+      };
+    }
+
     await run("search_listings", {
       location: extracted.preferredLocation,
       max_price: extracted.budgetMax,
@@ -112,39 +130,22 @@ export class MockAgent implements AgentProvider {
       intent: extracted.intent?.toLowerCase(),
     });
 
-    const listings = sideEffects.listings ?? [];
+    const listings = (sideEffects.listings ?? []).slice(0, 3);
     if (!listings.length) {
-      // Double-check via direct search for empty-results messaging
-      const empty = await searchListings({
-        location: extracted.preferredLocation,
-        budgetMax: extracted.budgetMax,
-        bedrooms: extracted.bedrooms,
-        intent: extracted.intent,
-      });
-      if (!empty.length) {
-        return {
-          text: "I don't have matching available listings right now. Would you like to widen the area or adjust the budget?",
-          extracted,
-          toolCalls,
-        };
-      }
+      return {
+        text: "I don't have matching available listings right now. Share an area or budget and I'll search again — or say \"talk to broker\" to escalate.",
+        extracted,
+        toolCalls,
+      };
     }
 
-    const lines = (listings.length
-      ? listings
-      : await searchListings({
-          location: extracted.preferredLocation,
-          budgetMax: extracted.budgetMax,
-          bedrooms: extracted.bedrooms,
-          intent: extracted.intent,
-        })
-    ).map(
+    const lines = listings.map(
       (l, i) =>
         `${i + 1}. ${l.title} (${l.listingCode}) — ${l.location}, ${l.currency} ${l.price}`,
     );
 
     return {
-      text: `Here are live matches from our inventory:\n${lines.join("\n")}\nReply with a listing code for details, or say "talk to broker" to escalate.`,
+      text: `Here are live matches:\n${lines.join("\n")}\nReply with a listing code for details, or say "talk to broker" to escalate.`,
       listings: sideEffects.listings,
       extracted: sideEffects.extracted as AgentReply["extracted"],
       toolCalls,

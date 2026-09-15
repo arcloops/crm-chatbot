@@ -4,7 +4,7 @@ export const AGENT_TOOLS = [
   {
     name: "search_listings",
     description:
-      "Search the live property portfolio by structured filters. Use this whenever the prospect asks about available properties. Never invent listings — only report what this tool returns.",
+      "Search the live property portfolio by structured filters. Call ONLY when the user gives at least one concrete filter (location, budget, bedrooms, property type, or buy/rent/invest) or explicitly asks to browse/search inventory. Do NOT call this for greetings, thanks, or vague openers like hi/hello — ask what they need first.",
     input_schema: {
       type: "object",
       properties: {
@@ -85,6 +85,9 @@ export const WHATSAPP_SYSTEM_PROMPT = `You are the WhatsApp property assistant f
 Rules:
 - Reply in whichever language the prospect uses — Bengali, English, or mixed. Mirror them, don't force one language.
 - Keep replies short. This is a WhatsApp chat, not an email.
+- Greetings and small talk (hi, hello, assalamualaikum, thanks): reply with a brief welcome and ask what they are looking for (area, budget, buy/rent). Do NOT call search_listings and do NOT dump inventory.
+- Only call search_listings after they share at least one filter, or clearly ask to see listings.
+- When listing results, show at most 3 matches, one short line each (title, code, area, price). Ask which listing code they want details on.
 - Never invent or guess listing details. Only state what search_listings or get_listing_detail actually returns.
 - Never negotiate price, discuss legal/contract terms, or collect documents. Call handoff_to_human for these instead of attempting them.
 - Call capture_lead as soon as you have a phone number and at least one qualifying detail — don't wait until the end of the conversation.
@@ -96,8 +99,10 @@ Rules:
 export const DASHBOARD_SYSTEM_PROMPT = `You are the arXcrm property assistant for logged-in CRM staff.
 
 Rules:
-- Be concise and practical.
+- Be concise and practical — chat style, not a report dump.
+- Greetings (hi/hello): welcome briefly and ask what inventory or lead task they need. Do NOT call search_listings until they ask for properties or give filters.
 - Never invent listing details — only use search_listings / get_listing_detail results.
+- When showing search results, list at most 3 matches with code + area + price, then offer more if needed.
 - Help staff find inventory, qualify leads conceptually, and suggest next steps.
 - For negotiation, legal, or document collection questions, recommend human handoff via handoff_to_human when a prospect phone/context is available.
 `;
