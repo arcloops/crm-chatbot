@@ -2,7 +2,7 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../lib/db.js";
 import { isStorageConfigured } from "../lib/env.js";
 import { getLogger } from "../lib/logger.js";
-import { pingRedis } from "../lib/redis.js";
+import { pingRedis, redisDiagnostics } from "../lib/redis.js";
 
 type CheckStatus = "ok" | "error" | "skipped";
 
@@ -52,11 +52,18 @@ async function healthHandler(_request: FastifyRequest, reply: FastifyReply) {
       ? { status: "ok", latencyMs: Date.now() - redisStart }
       : { status: "error", detail: "unexpected PING response" };
   } catch (error) {
+    const diag = redisDiagnostics();
+    const msg = error instanceof Error ? error.message : "redis unreachable";
+    const where = diag.parseError
+      ? "REDIS_URL unparseable"
+      : diag.host
+        ? `${diag.tls ? "rediss" : "redis"}://${diag.host}:${diag.port}`
+        : "REDIS_URL missing/invalid";
     checks.redis = {
       status: "error",
-      detail: error instanceof Error ? error.message : "redis unreachable",
+      detail: `${msg} (${where})`,
     };
-    log.error({ err: error }, "Redis health check failed");
+    log.error({ err: error, redis: diag }, "Redis health check failed");
   }
 
   const dbFailed = checks.database.status === "error";

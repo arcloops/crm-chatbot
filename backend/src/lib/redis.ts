@@ -13,25 +13,24 @@ function redisUrl(): string {
 }
 
 /** Shared ioredis options that work with Railway Redis (incl. rediss:// TLS). */
-export function redisConnectionOptions(): {
-  maxRetriesPerRequest: number | null;
-  enableReadyCheck: boolean;
-  lazyConnect: boolean;
-  family: number;
-  connectTimeout: number;
-  retryStrategy: (times: number) => number | null;
-} {
+export function redisConnectionOptions(overrides?: {
+  maxRetriesPerRequest?: number | null;
+  enableReadyCheck?: boolean;
+  lazyConnect?: boolean;
+}): Record<string, unknown> {
   return {
     maxRetriesPerRequest: 2,
     enableReadyCheck: true,
-    lazyConnect: true,
+    lazyConnect: false,
     // Prefer dual-stack; avoids some Railway/IPv6 connect failures.
     family: 0,
     connectTimeout: 10_000,
-    retryStrategy(times) {
+    keepAlive: 10_000,
+    retryStrategy(times: number) {
       if (times > 20) return null;
       return Math.min(times * 200, 3_000);
     },
+    ...overrides,
   };
 }
 
@@ -70,67 +69,67 @@ export function getRedis(): Redis {
   return globalForRedis.redis;
 }
 
-async function ensureReady(client: Redis): Promise<void> {
-  if (client.status === "ready") return;
-
-  if (client.status === "connecting" || client.status === "connect" || client.status === "reconnecting") {
-    await new Promise<void>((resolve, reject) => {
-      const onReady = () => {
-        cleanup();
-        resolve();
-      };
-      const onEnd = () => {
-        cleanup();
-        reject(new Error("Redis connection closed while connecting"));
-      };
-      const onError = (err: Error) => {
-        cleanup();
-        reject(err);
-      };
-      const timer = setTimeout(() => {
-        cleanup();
-        reject(new Error("Redis connect timeout"));
-      }, 10_000);
-      const cleanup = () => {
-        clearTimeout(timer);
-        client.off("ready", onReady);
-        client.off("end", onEnd);
-        client.off("error", onError);
-      };
-      client.once("ready", onReady);
-      client.once("end", onEnd);
-      client.once("error", onError);
-    });
-    return;
+/** Safe diagnostics for /health (no password). */
+export function redisDiagnostics(): {
+  configured: boolean;
+  tls: boolean;
+  host?: string;
+  port?: string;
+  parseError?: boolean;
+} {
+  const raw = redisUrl();
+  if (!raw) return { configured: false, tls: false };
+  try {
+    const normalized = raw.replace(/^rediss?:\/\//i, (m) =>
+      m.toLowerCase().startsWith("rediss") ? "https://" : "http://",
+    );
+    const u = new URL(normalized);
+    return {
+      configured: true,
+      tls: /^rediss:/i.test(raw),
+      host: u.hostname || undefined,
+      port: u.port || ( /^rediss:/i.test(raw) ? "6380" : "6379"),
+    };
+  } catch {
+    return { configured: true, tls: /^rediss:/i.test(raw), parseError: true };
   }
-
-  // wait | end | close — connect() only valid from wait; recreate if dead
-  if (isDead(client)) {
-    throw new Error("Redis connection is closed");
-  }
-  await client.connect();
 }
 
 /**
- * Health / readiness ping. Recreates the singleton if the previous socket died
- * (common on Railway after idle disconnects).
+ * Health ping using a fresh short-lived client so a dead singleton cannot
+ * poison /health forever (common when REDIS_URL is wrong or Redis is down).
  */
 export async function pingRedis(): Promise<boolean> {
-  let client = getRedis();
+  const probe = new Redis(
+    redisUrl(),
+    redisConnectionOptions({
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
+      enableReadyCheck: true,
+    }),
+  );
 
   try {
-    await ensureReady(client);
-    const result = await client.ping();
-    return result === "PONG";
-  } catch (first) {
-    log.warn(
-      { err: first instanceof Error ? first.message : first },
-      "Redis ping failed; recreating client",
-    );
+    await probe.connect();
+    const result = await probe.ping();
+    // Refresh shared singleton after a successful probe.
     resetRedis();
-    client = getRedis();
-    await ensureReady(client);
-    const result = await client.ping();
+    globalForRedis.redis = createRedisClient();
     return result === "PONG";
+  } catch (err) {
+    log.warn(
+      {
+        err: err instanceof Error ? err.message : err,
+        ...redisDiagnostics(),
+      },
+      "Redis ping failed",
+    );
+    throw err;
+  } finally {
+    try {
+      probe.disconnect(false);
+    } catch {
+      /* ignore */
+    }
   }
 }
