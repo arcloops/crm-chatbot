@@ -36,6 +36,7 @@ Phases **0–13**: CRM, WhatsApp campaigns/bot/inbox, analytics, developer partn
 
 See also:
 
+- `docs/BUILT_FEATURES.md` — inventory of what is implemented
 - `docs/SCALE_AND_INTEGRATIONS.md`
 - `docs/RUNBOOKS.md`
 - `docs/VERCEL_BACKEND.md`
