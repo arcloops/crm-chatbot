@@ -33,6 +33,8 @@ const envSchema = z.object({
   WHATSAPP_API_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
   WHATSAPP_PHONE_NUMBER_ID: z.preprocess(emptyToUndefined, z.string().optional()),
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  /** Alias accepted by Meta's dashboard examples; same value as WHATSAPP_WEBHOOK_VERIFY_TOKEN. */
+  META_VERIFY_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

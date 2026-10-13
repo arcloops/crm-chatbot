@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import {
   CampaignRecipientStatus,
   MessageDirection,
@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
+import { env } from "../lib/env.js";
 import { getLogger } from "../lib/logger.js";
 import { assertCanMessage } from "../lib/messaging.js";
 import { requirePermission } from "../plugins/auth.js";
@@ -34,16 +35,70 @@ const sendSchema = z.object({
   mediaUrl: z.string().url().optional(),
 });
 
-export const whatsappRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/webhooks/whatsapp", async (request, reply) => {
-    const provider = await getWhatsAppProvider();
-    const query = request.query as Record<string, string | undefined>;
-    const result = provider.verifyWebhook(query);
-    if (!result.ok) return reply.status(403).send("Forbidden");
-    return reply.status(200).send(result.challenge ?? "ok");
-  });
+/** Meta sends `hub.mode`; some parsers nest that as `{ hub: { mode } }`. */
+function readHubQuery(
+  query: unknown,
+  key: "mode" | "verify_token" | "challenge",
+): string | undefined {
+  if (!query || typeof query !== "object") return undefined;
+  const record = query as Record<string, unknown>;
+  const flat = record[`hub.${key}`];
+  if (typeof flat === "string" && flat.length > 0) return flat;
+  if (Array.isArray(flat) && typeof flat[0] === "string" && flat[0].length > 0) {
+    return flat[0];
+  }
+  const hub = record.hub;
+  if (hub && typeof hub === "object") {
+    const nested = (hub as Record<string, unknown>)[key];
+    if (typeof nested === "string" && nested.length > 0) return nested;
+  }
+  return undefined;
+}
 
-  app.post("/webhooks/whatsapp", async (request, _reply) => {
+function verifyTokenMatches(token: string): boolean {
+  const candidates = [env().WHATSAPP_WEBHOOK_VERIFY_TOKEN, env().META_VERIFY_TOKEN]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  return candidates.some((expected) => expected === token);
+}
+
+/**
+ * Meta webhook handshake. Must echo `hub.challenge` as text/plain and must not
+ * touch the database — Meta only checks status, body, and the verify token.
+ */
+async function verifyWhatsAppWebhook(request: FastifyRequest, reply: FastifyReply) {
+  const mode = readHubQuery(request.query, "mode");
+  const token = readHubQuery(request.query, "verify_token");
+  const challenge = readHubQuery(request.query, "challenge");
+  const log = getLogger({ route: "webhooks/whatsapp" });
+
+  if (!mode || !token) {
+    return reply.status(400).type("text/plain").send("Bad Request");
+  }
+
+  if (mode === "subscribe" && challenge && verifyTokenMatches(token)) {
+    log.info("WEBHOOK_VERIFIED");
+    return reply.status(200).type("text/plain").send(challenge);
+  }
+
+  const tokenConfigured = Boolean(
+    env().WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim() || env().META_VERIFY_TOKEN?.trim(),
+  );
+  log.warn(
+    { mode, tokenConfigured, hasChallenge: Boolean(challenge) },
+    "WhatsApp webhook verification failed",
+  );
+  return reply.status(403).type("text/plain").send("Verification failed: Token mismatch");
+}
+
+export const whatsappRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/webhooks/whatsapp", verifyWhatsAppWebhook);
+  app.get("/v1/webhooks/whatsapp", verifyWhatsAppWebhook);
+
+  app.post("/webhooks/whatsapp", receiveWhatsAppWebhook);
+  app.post("/v1/webhooks/whatsapp", receiveWhatsAppWebhook);
+
+  async function receiveWhatsAppWebhook(request: FastifyRequest, _reply: FastifyReply) {
     const provider = await getWhatsAppProvider();
     const events = provider.parseWebhook(
       request.body,
@@ -130,7 +185,7 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return { ok: true, processed: events.length, queued: inboundJobs.length };
-  });
+  }
 
   app.get(
     "/whatsapp/templates",
