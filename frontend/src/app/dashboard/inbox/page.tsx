@@ -54,6 +54,8 @@ export default function InboxPage() {
   const [reply, setReply] = useState("");
   const [suggestion, setSuggestion] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [windowOpen, setWindowOpen] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -69,9 +71,12 @@ export default function InboxPage() {
     setSuggestion("");
     const res = await apiFetch<{
       conversation: Conversation & { messages: Message[] };
+      windowOpen: boolean;
     }>(`/inbox/conversations/${id}`);
     setConversation(res.conversation);
     setMessages(res.conversation.messages);
+    setWindowOpen(res.windowOpen);
+    setNotice(null);
   }
 
   useEffect(() => {
@@ -84,17 +89,26 @@ export default function InboxPage() {
 
   async function onReply(e?: FormEvent) {
     e?.preventDefault();
-    if (!selectedId || !reply.trim() || sending) return;
+    if (!selectedId || sending) return;
+    if (windowOpen && !reply.trim()) return;
     setError(null);
     setSending(true);
     try {
-      await apiFetch(`/inbox/conversations/${selectedId}/reply`, {
-        method: "POST",
-        body: JSON.stringify({ body: reply.trim() }),
-      });
+      const res = await apiFetch<{ sentAsTemplate?: boolean }>(
+        `/inbox/conversations/${selectedId}/reply`,
+        {
+          method: "POST",
+          body: JSON.stringify({ body: reply.trim() }),
+        },
+      );
       setReply("");
       await loadThread(selectedId);
       await loadList();
+      if (res.sentAsTemplate) {
+        setNotice(
+          "Sent the hello_world template. Custom text can go out only after they reply and open a new 24-hour window.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reply failed");
     } finally {
@@ -137,6 +151,10 @@ export default function InboxPage() {
       {error ? (
         <div className="shrink-0 border-b border-[var(--border)] px-4 py-2">
           <Alert tone="danger">{error}</Alert>
+        </div>
+      ) : notice ? (
+        <div className="shrink-0 border-b border-[var(--border)] px-4 py-2">
+          <Alert tone="info">{notice}</Alert>
         </div>
       ) : null}
 
@@ -367,6 +385,12 @@ className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap
                 </div>
               </div>
 
+              {!windowOpen ? (
+                <p className="shrink-0 border-t border-[var(--border)] bg-[var(--warning-muted)] px-4 py-2 text-xs text-[var(--fg)]">
+                  The 24-hour window is closed. Send delivers the hello_world template, not custom text.
+                </p>
+              ) : null}
+
               <form
                 onSubmit={onReply}
                 className="flex shrink-0 items-end gap-2 border-t border-[var(--border)] bg-[var(--surface)]/85 px-3 py-3 backdrop-blur-md sm:px-4"
@@ -385,14 +409,16 @@ className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap
                             void onReply();
                           }
                         }}
-                        placeholder="Aa"
+                        placeholder={
+                          windowOpen ? "Aa" : "Window closed. Send delivers hello_world."
+                        }
                         disabled={sending}
                         className="max-h-32 min-h-[24px] w-full resize-none bg-transparent text-[15px] text-[var(--fg)] outline-none placeholder:text-[var(--fg-faint)]"
                       />
                     </div>
                     <button
                       type="submit"
-                      disabled={sending || !reply.trim()}
+                      disabled={sending || (windowOpen && !reply.trim())}
                       aria-label="Send reply"
                       className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--chat-bubble-out)] text-[var(--chat-bubble-out-fg)] shadow-[var(--shadow-glow)] transition-all duration-[var(--duration-fast)] hover:scale-105 hover:opacity-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100"
                     >

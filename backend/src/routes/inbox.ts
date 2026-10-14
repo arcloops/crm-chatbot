@@ -104,7 +104,7 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: requirePermission("inbox:write") },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const parsed = z.object({ body: z.string().min(1) }).safeParse(request.body);
+      const parsed = z.object({ body: z.string().optional() }).safeParse(request.body);
       if (!parsed.success) {
         return reply.status(400).send({ error: "body required" });
       }
@@ -114,31 +114,56 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
       });
       if (!conversation) return reply.status(404).send({ error: "Not found" });
 
+      let windowOpen = false;
       try {
-        await assertCanMessage(conversation.phoneE164, {
-          requireWindowForText: true,
+        const gate = await assertCanMessage(conversation.phoneE164, {
+          requireWindowForText: false,
         });
+        windowOpen = gate.windowOpen;
       } catch (error) {
-        return reply.status(400).send({
-          error: error instanceof Error ? error.message : "Cannot send",
-        });
+        const msg = error instanceof Error ? error.message : "Cannot send";
+        const status = msg.includes("suppression") || msg.includes("opted out") ? 403 : 400;
+        return reply.status(status).send({ error: msg });
+      }
+
+      const text = parsed.data.body?.trim() ?? "";
+      if (windowOpen && !text) {
+        return reply.status(400).send({ error: "body required" });
       }
 
       const provider = await getWhatsAppProvider();
-      const result = await provider.sendText({
-        to: conversation.phoneE164,
-        body: parsed.data.body,
-      });
+      const sendTemplate = !windowOpen;
+      let result;
+      try {
+        result = sendTemplate
+          ? await provider.sendTemplate({
+              to: conversation.phoneE164,
+              templateName: "hello_world",
+              language: "en_US",
+            })
+          : await provider.sendText({
+              to: conversation.phoneE164,
+              body: text,
+            });
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Send failed";
+        return reply.status(503).send({ error: msg });
+      }
 
       const message = await prisma.message.create({
         data: {
           conversationId: id,
           direction: MessageDirection.OUT,
-          type: MessageType.TEXT,
-          body: parsed.data.body,
+          type: sendTemplate ? MessageType.TEMPLATE : MessageType.TEXT,
+          body: sendTemplate ? "[template:hello_world]" : text,
+          templateName: sendTemplate ? "hello_world" : null,
           bspMessageId: result.bspMessageId,
           status:
-            result.status === "FAILED" ? MessageStatus.FAILED : MessageStatus.DELIVERED,
+            result.status === "FAILED"
+              ? MessageStatus.FAILED
+              : result.status === "QUEUED"
+                ? MessageStatus.QUEUED
+                : MessageStatus.DELIVERED,
         },
       });
 
@@ -152,7 +177,7 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
-      return { message };
+      return { message, sentAsTemplate: sendTemplate, windowOpen };
     },
   );
 
