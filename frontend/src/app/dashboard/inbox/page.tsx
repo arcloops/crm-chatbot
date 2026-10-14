@@ -66,9 +66,9 @@ export default function InboxPage() {
     setRows(res.data);
   }
 
-  async function loadThread(id: string) {
+  async function loadThread(id: string, opts?: { quiet?: boolean }) {
     setSelectedId(id);
-    setSuggestion("");
+    if (!opts?.quiet) setSuggestion("");
     const res = await apiFetch<{
       conversation: Conversation & { messages: Message[] };
       windowOpen: boolean;
@@ -76,12 +76,21 @@ export default function InboxPage() {
     setConversation(res.conversation);
     setMessages(res.conversation.messages);
     setWindowOpen(res.windowOpen);
-    setNotice(null);
+    if (!opts?.quiet) setNotice(null);
   }
 
   useEffect(() => {
     loadList().catch((err) => setError(err instanceof Error ? err.message : "Failed"));
   }, [filter]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const timer = window.setInterval(() => {
+      void loadThread(selectedId, { quiet: true }).catch(() => {});
+      void loadList().catch(() => {});
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [selectedId, filter]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,7 +115,7 @@ export default function InboxPage() {
       await loadList();
       if (res.sentAsTemplate) {
         setNotice(
-          "Sent the hello_world template. Custom text can go out only after they reply and open a new 24-hour window.",
+          "Sent the Order Confirmation template. Custom text can go out only after they reply and open a new 24-hour window.",
         );
       }
     } catch (err) {
@@ -387,7 +396,7 @@ className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap
 
               {!windowOpen ? (
                 <p className="shrink-0 border-t border-[var(--border)] bg-[var(--warning-muted)] px-4 py-2 text-xs text-[var(--fg)]">
-                  The 24-hour window is closed. Send delivers the hello_world template, not custom text.
+                  The 24-hour window is closed. Send delivers the Order Confirmation template, not custom text.
                 </p>
               ) : null}
 
@@ -410,7 +419,7 @@ className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap
                           }
                         }}
                         placeholder={
-                          windowOpen ? "Aa" : "Window closed. Send delivers hello_world."
+                          windowOpen ? "Aa" : "Window closed. Send delivers Order Confirmation."
                         }
                         disabled={sending}
                         className="max-h-32 min-h-[24px] w-full resize-none bg-transparent text-[15px] text-[var(--fg)] outline-none placeholder:text-[var(--fg-faint)]"

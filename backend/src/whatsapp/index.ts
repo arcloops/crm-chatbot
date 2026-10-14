@@ -2,7 +2,7 @@ import { WhatsAppMode } from "@prisma/client";
 import { prisma } from "../lib/db.js";
 import { getLogger } from "../lib/logger.js";
 import { MockWhatsApp } from "./mock.js";
-import { MetaWhatsApp, metaCredentialsPresent } from "./meta.js";
+import { MetaWhatsApp, metaCredentialsPresent, subscribeAppToWaba } from "./meta.js";
 import type { WhatsAppProvider } from "./types.js";
 
 const log = getLogger({ module: "whatsapp" });
@@ -29,6 +29,13 @@ export async function getWhatsAppProvider(): Promise<WhatsAppProvider> {
   }
 
   return new MockWhatsApp();
+}
+
+/** Subscribe this app to the WABA so customer replies reach the webhook. */
+export async function ensureWhatsAppWebhookSubscription(): Promise<void> {
+  const provider = await getWhatsAppProvider();
+  if (provider.name !== "meta") return;
+  await subscribeAppToWaba();
 }
 
 export type { WhatsAppProvider } from "./types.js";

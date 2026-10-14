@@ -274,6 +274,52 @@ export class MetaWhatsApp implements WhatsAppProvider {
   }
 }
 
+/**
+ * API Setup "Test" hits the callback directly. Real replies and delivery
+ * updates only arrive after this app is subscribed to the WhatsApp Business Account.
+ */
+export async function subscribeAppToWaba(): Promise<void> {
+  const version = graphVersion();
+  const token = accessToken();
+  const phoneId = phoneNumberId();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const phoneRes = await fetch(
+    `https://graph.facebook.com/${version}/${phoneId}?fields=whatsapp_business_account`,
+    { headers },
+  );
+  const phoneData = (await phoneRes.json().catch(() => ({}))) as {
+    whatsapp_business_account?: { id?: string };
+    error?: { message?: string; code?: number };
+  };
+  const wabaId = phoneData.whatsapp_business_account?.id;
+  if (!phoneRes.ok || !wabaId) {
+    log.error(
+      { status: phoneRes.status, error: phoneData.error?.message, phoneNumberId: phoneId },
+      "Could not resolve WhatsApp Business Account for webhook subscription",
+    );
+    return;
+  }
+
+  const subRes = await fetch(
+    `https://graph.facebook.com/${version}/${wabaId}/subscribed_apps`,
+    { method: "POST", headers },
+  );
+  const subData = (await subRes.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string; code?: number };
+  };
+  if (!subRes.ok || subData.error) {
+    log.error(
+      { status: subRes.status, error: subData.error?.message, wabaId },
+      "WhatsApp webhook subscription failed",
+    );
+    return;
+  }
+
+  log.info({ wabaId, phoneNumberId: phoneId }, "WhatsApp app subscribed to business account");
+}
+
 export function metaCredentialsPresent(): boolean {
   const e = env();
   const token = e.WHATSAPP_API_KEY || e.WHATSAPP_API_SECRET;

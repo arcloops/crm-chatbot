@@ -138,8 +138,17 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
         result = sendTemplate
           ? await provider.sendTemplate({
               to: conversation.phoneE164,
-              templateName: "hello_world",
+              templateName: "jaspers_market_order_confirmation_v1",
               language: "en_US",
+              variables: {
+                "1": "Customer",
+                "2": conversation.phoneE164.replace(/\D/g, "").slice(-6) || "000000",
+                "3": new Date().toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }),
+              },
             })
           : await provider.sendText({
               to: conversation.phoneE164,
@@ -155,8 +164,8 @@ export const inboxRoutes: FastifyPluginAsync = async (app) => {
           conversationId: id,
           direction: MessageDirection.OUT,
           type: sendTemplate ? MessageType.TEMPLATE : MessageType.TEXT,
-          body: sendTemplate ? "[template:hello_world]" : text,
-          templateName: sendTemplate ? "hello_world" : null,
+          body: sendTemplate ? "[template:jaspers_market_order_confirmation_v1]" : text,
+          templateName: sendTemplate ? "jaspers_market_order_confirmation_v1" : null,
           bspMessageId: result.bspMessageId,
           status:
             result.status === "FAILED"

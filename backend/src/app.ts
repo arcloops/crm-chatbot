@@ -130,4 +130,9 @@ if (!isVercelRuntime()) {
 
   await app.listen({ port: config.PORT, host: "0.0.0.0" });
   log.info({ port: config.PORT }, "Backend listening");
+
+  const { ensureWhatsAppWebhookSubscription } = await import("./whatsapp/index.js");
+  void ensureWhatsAppWebhookSubscription().catch((error) => {
+    log.warn({ err: error }, "WhatsApp webhook subscription failed");
+  });
 }

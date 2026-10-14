@@ -271,8 +271,17 @@ export async function handleInboundMessage(opts: {
       const provider = await getWhatsAppProvider();
       const result = await provider.sendTemplate({
         to: phoneE164,
-        templateName: "hello_world",
+        templateName: "jaspers_market_order_confirmation_v1",
         language: "en_US",
+        variables: {
+          "1": "Customer",
+          "2": phoneE164.replace(/\D/g, "").slice(-6) || "000000",
+          "3": new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+        },
       });
       await prisma.message.create({
         data: {
@@ -280,7 +289,7 @@ export async function handleInboundMessage(opts: {
           direction: MessageDirection.OUT,
           type: MessageType.TEMPLATE,
           body: reply.text,
-          templateName: "hello_world",
+          templateName: "jaspers_market_order_confirmation_v1",
           bspMessageId: result.bspMessageId,
           status: MessageStatus.DELIVERED,
         },
