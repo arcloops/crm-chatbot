@@ -10,7 +10,10 @@ import type {
 } from "./types.js";
 
 const log = getLogger({ module: "whatsapp-meta" });
-const GRAPH_VERSION = "v21.0";
+
+function graphVersion(): string {
+  return env().WHATSAPP_GRAPH_VERSION || "v25.0";
+}
 
 function accessToken(): string {
   const e = env();
@@ -61,7 +64,7 @@ type GraphSendResponse = {
 };
 
 async function graphSend(payload: Record<string, unknown>): Promise<SendResult> {
-  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId()}/messages`;
+  const url = `https://graph.facebook.com/${graphVersion()}/${phoneNumberId()}/messages`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -124,7 +127,11 @@ export class MetaWhatsApp implements WhatsAppProvider {
     const params = templateBodyParams(input.variables);
     const template: Record<string, unknown> = {
       name: input.templateName,
-      language: { code: input.language ?? "en" },
+      language: {
+        code:
+          input.language ??
+          (input.templateName === "hello_world" ? "en_US" : "en"),
+      },
     };
     if (params.length) {
       template.components = [{ type: "body", parameters: params }];

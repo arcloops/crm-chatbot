@@ -57,7 +57,7 @@ async function seedSettingsAndTemplates() {
   const templates = [
     {
       name: "hello_world",
-      language: "en",
+      language: "en_US",
       bodyPreview: "Hello {{1}}, welcome to Arcloops.",
     },
     {

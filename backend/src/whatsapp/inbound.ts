@@ -4,7 +4,6 @@ import {
   MessageDirection,
   MessageStatus,
   MessageType,
-  WhatsAppMode,
 } from "@prisma/client";
 import { getAgent } from "../agent/index.js";
 import { escalateConversation, upsertProspectFromPhone } from "../agent/escalate.js";
@@ -270,26 +269,22 @@ export async function handleInboundMessage(opts: {
       await sendBotText(phoneE164, reply.text, conversation.id);
     } else {
       const provider = await getWhatsAppProvider();
-      const settings = await prisma.appSettings.findUnique({
-        where: { id: "default" },
+      const result = await provider.sendTemplate({
+        to: phoneE164,
+        templateName: "hello_world",
+        language: "en_US",
       });
-      if (!settings || settings.whatsappMode === WhatsAppMode.MOCK) {
-        const result = await provider.sendTemplate({
-          to: phoneE164,
+      await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          direction: MessageDirection.OUT,
+          type: MessageType.TEMPLATE,
+          body: reply.text,
           templateName: "hello_world",
-        });
-        await prisma.message.create({
-          data: {
-            conversationId: conversation.id,
-            direction: MessageDirection.OUT,
-            type: MessageType.TEMPLATE,
-            body: reply.text,
-            templateName: "hello_world",
-            bspMessageId: result.bspMessageId,
-            status: MessageStatus.DELIVERED,
-          },
-        });
-      }
+          bspMessageId: result.bspMessageId,
+          status: MessageStatus.DELIVERED,
+        },
+      });
     }
   }
 
