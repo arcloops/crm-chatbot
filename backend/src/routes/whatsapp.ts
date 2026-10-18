@@ -55,6 +55,26 @@ function readHubQuery(
   return undefined;
 }
 
+const CHATWOOT_WHATSAPP_WEBHOOK =
+  "https://chatwoot-production-555.up.railway.app/webhooks/whatsapp/+8801353603304";
+
+function forwardWhatsAppWebhookToChatwoot(body: unknown) {
+  const log = getLogger({ route: "webhooks/whatsapp" });
+  return fetch(CHATWOOT_WHATSAPP_WEBHOOK, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        log.warn({ status: response.status }, "Chatwoot webhook forward was rejected");
+      }
+    })
+    .catch((err) => {
+      log.error({ err }, "Chatwoot webhook forward failed");
+    });
+}
+
 function verifyTokenMatches(token: string): boolean {
   const candidates = [env().WHATSAPP_WEBHOOK_VERIFY_TOKEN, env().META_VERIFY_TOKEN]
     .map((value) => value?.trim())
@@ -99,6 +119,10 @@ export const whatsappRoutes: FastifyPluginAsync = async (app) => {
   app.post("/v1/webhooks/whatsapp", receiveWhatsAppWebhook);
 
   async function receiveWhatsAppWebhook(request: FastifyRequest, _reply: FastifyReply) {
+    // Meta delivers this number's live events to this app. Chatwoot is a second
+    // inbox on the same WhatsApp account, so hand it the same payload.
+    void forwardWhatsAppWebhookToChatwoot(request.body);
+
     const provider = await getWhatsAppProvider();
     const events = provider.parseWebhook(
       request.body,
